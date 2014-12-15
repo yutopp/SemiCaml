@@ -148,7 +148,9 @@ eprintln($(CWD)/OMakefile is not configured)
 #
 
 FILES[] =
-   main
+	main
+	ast
+	parser
 
 PROGRAM = semicaml
 # OCAML_LIBS +=
