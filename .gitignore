@@ -1,0 +1,9 @@
+*.cmi
+*.cmx
+*.o
+.omakedb
+.omakedb.lock
+*.omc
+
+semicaml.opt
+semicaml
