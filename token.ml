@@ -12,6 +12,7 @@ type opcode =
 type keyword =
     | If | Then | Else | Let | Array | New
     | True | False
+    | Int | Float | Bool
 ;;
 
 type token =
