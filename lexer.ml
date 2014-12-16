@@ -49,15 +49,10 @@ let rec state_start tokens input = match input with
     | '=' ::        tail -> state_start (Op Assign :: tokens) tail
     | '<' :: '-' :: tail -> state_start (Op ArrayAssign :: tokens) tail
 
-    | '<' :: '=' :: '.' :: tail -> state_start (Op LessEqualFloat :: tokens) tail
-    | '<' :: '=' ::        tail -> state_start (Op LessEqualInt :: tokens) tail
-    | '<' :: '.' ::        tail -> state_start (Op LessFloat :: tokens) tail
-    | '<' ::               tail -> state_start (Op LessInt :: tokens) tail
-
-    | '>' :: '=' :: '.' :: tail -> state_start (Op GreaterEqualFloat :: tokens) tail
-    | '>' :: '=' ::        tail -> state_start (Op GreaterEqualInt :: tokens) tail
-    | '>' :: '.' ::        tail -> state_start (Op GreaterFloat :: tokens) tail
-    | '>' ::               tail -> state_start (Op GreaterInt :: tokens) tail
+    | '<' :: '=' :: tail -> state_start (Op LessEqual :: tokens) tail
+    | '<' ::        tail -> state_start (Op Less :: tokens) tail
+    | '>' :: '=' :: tail -> state_start (Op GreaterEqual :: tokens) tail
+    | '>' ::        tail -> state_start (Op Greater :: tokens) tail
 
     | '+' :: '.' :: tail -> state_start (Op AddFloat :: tokens) tail
     | '+' ::        tail -> state_start (Op AddInt :: tokens) tail

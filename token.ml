@@ -3,8 +3,7 @@ type opcode =
     | Or | And
     | Equal | NotEqual
     | Assign | ArrayAssign
-    | LessEqualFloat | LessEqualInt | GreaterEqualFloat | GreaterEqualInt
-    | LessFloat | LessInt | GreaterFloat | GreaterInt
+    | LessEqual| GreaterEqual | Less | Greater
     | AddFloat | AddInt | SubFloat | SubInt
     | MulFloat | MulInt | DivFloat | DivInt
     | Dot
