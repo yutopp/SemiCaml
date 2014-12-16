@@ -9,10 +9,13 @@ type opcode =
     | Dot
 ;;
 
+type keyword = If | Then | Else | Let | Array | New
+
 type token =
     | ParenOpen | ParenClose
     | Op of opcode
     | IntLiteral of int
     | FloatLiteral of float
+    | Keyword of keyword
     | Identifier of string
 ;;

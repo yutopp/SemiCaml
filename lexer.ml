@@ -85,7 +85,14 @@ and state_float tokens working_string input = match input with
 
 and state_identifier tokens working_string input = match input with
     | head :: tail when is_alpha_or_underscore head || is_digit head -> state_identifier tokens (working_string ^ string_of_char head) tail
-    | _                                                              -> state_start (Identifier working_string :: tokens) input
+    | _ -> match working_string with
+        | "if"    -> state_start (Keyword If                :: tokens) input
+        | "then"  -> state_start (Keyword Then              :: tokens) input
+        | "else"  -> state_start (Keyword Else              :: tokens) input
+        | "let"   -> state_start (Keyword Let               :: tokens) input
+        | "Array" -> state_start (Keyword Array             :: tokens) input
+        | "new"   -> state_start (Keyword New               :: tokens) input
+        | _       -> state_start (Identifier working_string :: tokens) input
 ;;
 
-let lex = state_start []
+let lex = state_start [];;
