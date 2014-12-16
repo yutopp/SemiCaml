@@ -92,6 +92,8 @@ and state_identifier tokens working_string input = match input with
         | "let"   -> state_start (Keyword Let               :: tokens) input
         | "Array" -> state_start (Keyword Array             :: tokens) input
         | "new"   -> state_start (Keyword New               :: tokens) input
+        | "true"  -> state_start (Keyword True              :: tokens) input
+        | "false" -> state_start (Keyword False             :: tokens) input
         | _       -> state_start (Identifier working_string :: tokens) input
 ;;
 

@@ -9,7 +9,10 @@ type opcode =
     | Dot
 ;;
 
-type keyword = If | Then | Else | Let | Array | New
+type keyword =
+    | If | Then | Else | Let | Array | New
+    | True | False
+;;
 
 type token =
     | ParenOpen | ParenClose
