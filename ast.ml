@@ -1,9 +1,35 @@
-type program =
-  Program of seq list
+type ast =
+    Program of ast list
+  | Seq of ast list
+  | VerDecl of string * ast
+  | FuncDecl of string * string list * ast
+  | ArrayNew of string * ast
+  | CondExpr of ast * ast * ast
 
-and seq =
-  Seq of expr list
+  | LogicOrExpr of ast ast
+  | LogicAndExpr of ast ast
 
-and expr =
-    VerDecl of string
-  | FuncDecl of string * string list * seq
+  | EqualExpr of ast * ast
+  | NotEqualExpr of ast * ast
+
+  | LessExpr of ast * ast
+  | LessEqualExpr of ast * ast
+  | GreaterExpr of ast * ast
+  | GreaterEqualExpr of ast * ast
+
+  | AddIntExpr of ast * ast
+  | SubIntExpr of ast * ast
+  | MulIntExpr of ast * ast
+  | DivIntExpr of ast * ast
+  | AddFloatExpr of ast * ast
+  | SubFloatExpr of ast * ast
+  | MulFloatExpr of ast * ast
+  | DivFloatExpr of ast * ast
+
+  | IntLiteral of int
+  | FloatLiteral of float
+  | BoolLiteral of bool
+
+  | ArrayGet of string * ast
+  | ArrayAssign of string * ast * ast
+  | FuncCall of string * ast list
