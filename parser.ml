@@ -1,24 +1,24 @@
 open Ast
 
 let parse filename =
-  Program [Seq [VerDecl "a"]]
+  Program [Seq [VerDecl("a", IntLiteral 1)]]
 
-let rec dump_program a = match a with
+let rec dump a = match a with
     Program xs -> (
     Printf.printf "Program[\n";
-    List.iter (fun x -> dump_sequence x) xs;
+    List.iter (fun x -> dump x) xs;
     Printf.printf "]\n";
   )
-and dump_sequence a = match a with
-    Seq xs -> (
+  | Seq xs -> (
     Printf.printf "Sequence[\n";
-    List.iter (fun x -> dump_expression x) xs;
+    List.iter (fun x -> dump x; Printf.printf "::\n") xs;
     Printf.printf "]\n";
   )
-and dump_expression a = match a with
-  | VerDecl id -> (
-    Printf.printf "VerDecl\n";
+  | VerDecl( id, expr ) -> (
+    Printf.printf "VerDecl = \n";
+    dump expr;
   )
   | FuncDecl( id, args, body ) -> (
     Printf.printf "FuncDecl\n";
   )
+  | _ -> Printf.printf "Not supported\n";
