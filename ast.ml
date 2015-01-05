@@ -6,8 +6,8 @@ type ast =
   | ArrayNew of string * ast
   | CondExpr of ast * ast * ast
 
-  | LogicOrExpr of ast ast
-  | LogicAndExpr of ast ast
+  | LogicOrExpr of ast * ast
+  | LogicAndExpr of ast * ast
 
   | EqualExpr of ast * ast
   | NotEqualExpr of ast * ast
