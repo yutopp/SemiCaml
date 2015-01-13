@@ -1,5 +1,6 @@
 open Ast
 
+(* rest *)
 (* type ast = *)
 (*     Program of ast list *)
 (*   | Seq of ast list *)
@@ -15,6 +16,12 @@ type value =
   | IntVal of int
   | FloatVal of float
   | BoolVal of bool
+
+type constant_folder = {
+  int : int -> int -> bool;
+  float : float -> float -> bool;
+  bool : bool -> bool -> bool;
+}
                  
 let rec eval input =
   let intop f e1 e2 = match (eval e1, eval e2) with
@@ -28,6 +35,30 @@ let rec eval input =
   let boolop f e1 e2 = match (eval e1, eval e2) with
     | (BoolVal b1, BoolVal b2) -> BoolVal (f b1 b2)
     | _ -> failwith "bool value expected"
+  in
+  let compop f e1 e2 = match (eval e1, eval e2) with
+    | (IntVal n1, IntVal n2) -> BoolVal (f.int n1 n2)
+    | (FloatVal n1, FloatVal n2) -> BoolVal (f.float n1 n2)
+    | (BoolVal b1, BoolVal b2) -> BoolVal (f.bool b1 b2)
+    | _ -> failwith "bool value expected"
+  in
+  let equal =
+    { int = ( = ); float = ( = ); bool = ( = ) }
+  in
+  let not_equal =
+    { int = ( <> ); float = ( <> ); bool = ( <> ) }
+  in
+  let less =
+    { int = ( < ); float = ( < ); bool = ( < ) }
+  in
+  let less_equal = 
+    { int = ( <= ); float = ( <= ); bool = ( <= ) }
+  in
+  let greater =
+    { int = ( > ); float = ( > ); bool = ( > ) }
+  in
+  let greater_equal = 
+    { int = ( >= ); float = ( >= ); bool = ( >= ) }
   in
   match input with
   | IntLiteral n -> IntVal n
@@ -43,53 +74,21 @@ let rec eval input =
   | MulFloatExpr (e1,e2) -> floatop ( *. ) e1 e2
   | DivFloatExpr (e1,e2) when (eval e2 = FloatVal 0.0) -> failwith "0 Division"
   | DivFloatExpr (e1,e2) -> floatop ( /. ) e1 e2
-  | EqualExpr (e1,e2) ->
-     (match (eval e1, eval e2) with
-      | (IntVal n1, IntVal n2) -> BoolVal (n1 = n2)
-      | (FloatVal n1, FloatVal n2) -> BoolVal (n1 = n2)
-      | (BoolVal b1, BoolVal b2) -> BoolVal (b1 = b2)
-      | _ -> failwith "Integer, Float or Bool values expected"
-     )
-  | NotEqualExpr (e1,e2) ->
-     (match (eval e1, eval e2) with
-      | (IntVal n1, IntVal n2) -> BoolVal (n1 <> n2)
-      | (FloatVal n1, FloatVal n2) -> BoolVal (n1 <> n2)
-      | (BoolVal b1, BoolVal b2) -> BoolVal (b1 <> b2)
-      | _ -> failwith "Integer, Float or Bool values expected"
-     )
-  | LessExpr (e1,e2) ->
-     (match (eval e1, eval e2) with
-      | (IntVal n1, IntVal n2) -> BoolVal (n1 < n2)
-      | (FloatVal n1, FloatVal n2) -> BoolVal (n1 < n2)
-      | _ -> failwith "Integer or Float values expected"
-     )
-  | LessEqualExpr (e1,e2) ->
-     (match (eval e1, eval e2) with
-      | (IntVal n1, IntVal n2) -> BoolVal (n1 <= n2)
-      | (FloatVal n1, FloatVal n2) -> BoolVal (n1 <= n2)
-      | _ -> failwith "Integer or Float values expected"
-     )       
-  | GreaterExpr (e1,e2) ->
-     (match (eval e1, eval e2) with
-      | (IntVal n1, IntVal n2) -> BoolVal (n1 > n2)
-      | (FloatVal n1, FloatVal n2) -> BoolVal (n1 > n2)
-      | _ -> failwith "Integer or Float values expected"
-     )     
-  | GreaterEqualExpr (e1,e2) ->
-     (match (eval e1, eval e2) with
-      | (IntVal n1, IntVal n2) -> BoolVal (n1 >= n2)
-      | (FloatVal n1, FloatVal n2) -> BoolVal (n1 >= n2)
-      | _ -> failwith "Integer or Float values expected"
-     )          
   | LogicOrExpr (e1,e2) -> boolop ( || ) e1 e2
-  | LogicAndExpr (e1,e2) -> boolop ( && ) e1 e2
+  | LogicAndExpr (e1,e2) -> boolop ( && ) e1 e2                                    
+  | EqualExpr (e1,e2) -> compop ( equal ) e1 e2
+  | NotEqualExpr (e1,e2) -> compop ( not_equal ) e1 e2
+  | LessExpr (e1,e2) -> compop ( less ) e1 e2
+  | LessEqualExpr (e1,e2) -> compop ( less_equal ) e1 e2
+  | GreaterExpr (e1,e2) -> compop ( greater ) e1 e2
+  | GreaterEqualExpr (e1,e2) -> compop ( greater_equal ) e1 e2
   | CondExpr (e1,e2,e3) ->
      (match (eval e1) with
       | BoolVal true -> eval e2
       | BoolVal false -> eval e3
       | _ -> failwith "first exp bool value expected"
      )                             
-  | _ -> failwith "no support"
+  | _ -> failwith "unknown exp"
                   
 let _ = eval (AddIntExpr (IntLiteral 3, IntLiteral 2))                             = IntVal 5                
 let _ = eval (AddIntExpr (AddIntExpr (IntLiteral 3, IntLiteral 3), IntLiteral 2))  = IntVal 8                
