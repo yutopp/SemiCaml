@@ -64,6 +64,7 @@ let rec eval input =
   | IntLiteral n -> IntVal n
   | FloatLiteral n -> FloatVal n
   | BoolLiteral b -> BoolVal b
+                             
   | AddIntExpr (e1,e2) -> intop ( + ) e1 e2
   | SubIntExpr (e1,e2) -> intop ( - ) e1 e2
   | MulIntExpr (e1,e2) -> intop ( * ) e1 e2
@@ -74,6 +75,7 @@ let rec eval input =
   | MulFloatExpr (e1,e2) -> floatop ( *. ) e1 e2
   | DivFloatExpr (e1,e2) when (eval e2 = FloatVal 0.0) -> failwith "0 Division"
   | DivFloatExpr (e1,e2) -> floatop ( /. ) e1 e2
+                                    
   | LogicOrExpr (e1,e2) -> boolop ( || ) e1 e2
   | LogicAndExpr (e1,e2) -> boolop ( && ) e1 e2                                    
   | EqualExpr (e1,e2) -> compop ( equal ) e1 e2
@@ -82,6 +84,7 @@ let rec eval input =
   | LessEqualExpr (e1,e2) -> compop ( less_equal ) e1 e2
   | GreaterExpr (e1,e2) -> compop ( greater ) e1 e2
   | GreaterEqualExpr (e1,e2) -> compop ( greater_equal ) e1 e2
+                                       
   | CondExpr (e1,e2,e3) ->
      (match (eval e1) with
       | BoolVal true -> eval e2
@@ -123,11 +126,13 @@ let _ = eval (NotEqualExpr (BoolLiteral true, BoolLiteral true))                
 
 let _ = eval (LessExpr (IntLiteral 3, IntLiteral 5))                               = BoolVal true 
 let _ = eval (LessExpr (IntLiteral 5, IntLiteral 3))                               = BoolVal false
+let _ = eval (LessExpr (BoolLiteral false, BoolLiteral true))                      = BoolVal true
 let _ = eval (LessEqualExpr (IntLiteral 3, IntLiteral 3))                          = BoolVal true 
 let _ = eval (LessEqualExpr (IntLiteral 3, IntLiteral 5))                          = BoolVal true 
 let _ = eval (LessEqualExpr (IntLiteral 5, IntLiteral 3))                          = BoolVal false
 let _ = eval (GreaterExpr (IntLiteral 5, IntLiteral 3))                            = BoolVal true 
 let _ = eval (GreaterExpr (IntLiteral 3, IntLiteral 5))                            = BoolVal false
+let _ = eval (GreaterExpr (BoolLiteral true, BoolLiteral false))                   = BoolVal true
 let _ = eval (GreaterEqualExpr (IntLiteral 3, IntLiteral 3))                       = BoolVal true 
 let _ = eval (GreaterEqualExpr (IntLiteral 5, IntLiteral 3))                       = BoolVal true 
 let _ = eval (GreaterEqualExpr (IntLiteral 3, IntLiteral 5))                       = BoolVal false 
