@@ -49,6 +49,7 @@
 # ASFLAGS +=
 # LDFLAGS +=
 # INCLUDES +=
+CXXFLAGS += -std=c++11
 
 ################################################
 # Uncomment the following section if you want
@@ -68,13 +69,12 @@
 # in the current directory.
 #
 
-# LIBFILES[] =
-#    file1
-#    file2
-#
-# LIB = libxxx
-#
-# .DEFAULT: $(StaticCLibrary $(LIB), $(LIBFILES))
+LIBFILES[] =
+	runtime
+
+LIB = libsemiruntime
+
+.DEFAULT: $(StaticCXXLibrary $(LIB), $(LIBFILES))
 
 ########################################################################
 # OCaml configuration.
@@ -93,6 +93,8 @@ USE_OCAMLFIND = true
 
 OCAMLPACKS[] =
 	llvm
+	llvm.bitwriter
+	llvm.analysis
 
 if $(not $(OCAMLFIND_EXISTS))
 	eprintln(This project requires ocamlfind, but is was not found.)

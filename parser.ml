@@ -4,7 +4,7 @@ let parse filename =
   Program [
       Seq [
           VerDecl("a", IntLiteral 1);
-          ExprStmt (FuncCall ("print_int", [AddIntExpr(Id("a"), IntLiteral 4)]))
+          ExprStmt (FuncCall ("print_int", [AddIntExpr(Id("a"), IntLiteral 6)]))
         ]
     ]
 

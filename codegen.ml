@@ -1,4 +1,5 @@
 module L = Llvm
+module LBW = Llvm_bitwriter
 module A = Analyzer
 
 let context = L.global_context ()
@@ -104,7 +105,7 @@ let rec make_llvm_ir aast = match aast with
   | A.VarDecl(id, expr, tk) -> (
     let v = make_llvm_ir expr in
     let alloca_inst = L.build_alloca (to_llvm_ty tk) "" builder in
-    let _ = L.build_store alloca_inst v builder in
+    let _ = L.build_store v alloca_inst builder in
     Hashtbl.add val_table id alloca_inst;
     alloca_inst
   )
@@ -124,8 +125,8 @@ let rec make_llvm_ir aast = match aast with
   )
   | _ -> raise NotSupportedNode
 
-let rec gyo aast = match aast with
-    A.Flow ax -> List.iter (fun a -> gyo a) ax
+let rec make_llvm_ir_seq aast = match aast with
+    A.Flow ax -> List.iter (fun a -> make_llvm_ir_seq a) ax
   | v -> ignore (make_llvm_ir v)
 
 let compile aast =
@@ -142,11 +143,29 @@ let compile aast =
 
   let params = Array.make 0 void_ty in
   let ft = L.function_type void_ty params in
-  let f = L.declare_function "_semi_entry" ft s_module in
+  let f = L.declare_function "_semi_caml_entry" ft s_module in
   let bb = L.append_block context "entry" f in
 
   L.position_at_end bb builder;
 
-  gyo aast;
+  make_llvm_ir_seq aast;
+  L.dump_module s_module;
 
-  L.dump_module s_module
+  ignore (L.build_ret_void builder);
+
+  Llvm_analysis.assert_valid_function f;
+
+  s_module
+
+exception FailedToWriteBitcode
+exception FailedToBuildBitcode
+exception FailedToBuildExecutable
+
+let create_executable m =
+  let bc_wrote = LBW.write_bitcode_file m "a.bc" in
+  if not bc_wrote then raise FailedToWriteBitcode;
+  let sc = Sys.command "llc a.bc" in
+  if sc <> 0 then raise FailedToBuildBitcode;
+  let sc = Sys.command "g++ a.s libsemiruntime.a" in
+  if sc <> 0 then raise FailedToBuildExecutable;
+  ()

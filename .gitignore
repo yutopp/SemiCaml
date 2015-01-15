@@ -2,9 +2,15 @@
 *.cmx
 *.cmo
 *.o
+*.a
+
 .omakedb
 .omakedb.lock
 *.omc
 
 semicaml.opt
 semicaml
+
+a.out
+a.bc
+a.s
