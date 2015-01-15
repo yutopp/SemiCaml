@@ -1,7 +1,7 @@
 open Ast
 
 let parse filename =
-  Program [Seq [VerDecl("a", IntLiteral 1)]]
+  Program [Seq [VerDecl("a", IntLiteral 1); ExprStmt(AddIntExpr(Id("a"), IntLiteral 4))]]
 
 let rec dump ?(offset=0) a =
   let off_s = String.make (offset*2) ' ' in
@@ -17,10 +17,27 @@ let rec dump ?(offset=0) a =
     Printf.printf "%s]\n" off_s;
   )
   | VerDecl( id, expr ) -> (
-    Printf.printf "%sVerDecl = \n" off_s;
+    Printf.printf "%sVerDecl %s = " off_s id;
     dump ~offset:(offset+1) expr;
+    Printf.printf "\n";
   )
   | FuncDecl( id, args, body ) -> (
     Printf.printf "%sFuncDecl\n" off_s;
   )
+  | ExprStmt ast -> Printf.printf "%sExp: " off_s; dump ast; Printf.printf "\n";
+
+  | AddIntExpr(lhs, rhs) -> dump(lhs); Printf.printf " + "; dump(rhs)
+  | SubIntExpr(lhs, rhs) -> dump(lhs); Printf.printf " - "; dump(rhs)
+  | MulIntExpr(lhs, rhs) -> dump(lhs); Printf.printf " * "; dump(rhs)
+  | DivIntExpr(lhs, rhs) -> dump(lhs); Printf.printf " / "; dump(rhs)
+  | AddFloatExpr(lhs, rhs) -> dump(lhs); Printf.printf " +. "; dump(rhs)
+  | SubFloatExpr(lhs, rhs) -> dump(lhs); Printf.printf " -. "; dump(rhs)
+  | MulFloatExpr(lhs, rhs) -> dump(lhs); Printf.printf " *. "; dump(rhs)
+  | DivFloatExpr(lhs, rhs) -> dump(lhs); Printf.printf " /. "; dump(rhs)
+
+  | IntLiteral v -> Printf.printf "%d" v
+  | FloatLiteral v -> Printf.printf "%f" v
+  | BoolLiteral v -> Printf.printf "%b" v
+
+  | Id name -> Printf.printf "ID(%s)" name
   | _ -> Printf.printf "%sNot supported\n" off_s;

@@ -152,6 +152,8 @@ FILES[] =
 	ast
 	lexer
 	parser
+	analyzer
+	codegen
 	main
 
 PROGRAM = semicaml

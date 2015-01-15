@@ -5,6 +5,7 @@ type ast =
   | FuncDecl of string * string list * ast
   | ArrayNew of string * ast
   | CondExpr of ast * ast * ast
+  | ExprStmt of ast
 
   | LogicOrExpr of ast * ast
   | LogicAndExpr of ast * ast
@@ -33,3 +34,4 @@ type ast =
   | ArrayGet of string * ast
   | ArrayAssign of string * ast * ast
   | FuncCall of string * ast list
+  | Id of string
