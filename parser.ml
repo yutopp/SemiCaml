@@ -1,7 +1,12 @@
 open Ast
 
 let parse filename =
-  Program [Seq [VerDecl("a", IntLiteral 1); ExprStmt(AddIntExpr(Id("a"), IntLiteral 4))]]
+  Program [
+      Seq [
+          VerDecl("a", IntLiteral 1);
+          ExprStmt (FuncCall ("print_int", [AddIntExpr(Id("a"), IntLiteral 4)]))
+        ]
+    ]
 
 let rec dump ?(offset=0) a =
   let off_s = String.make (offset*2) ' ' in
@@ -16,7 +21,7 @@ let rec dump ?(offset=0) a =
     List.iter (fun x -> dump ~offset:(offset+1) x; Printf.printf "%s,\n" off_s) xs;
     Printf.printf "%s]\n" off_s;
   )
-  | VerDecl( id, expr ) -> (
+  | VerDecl (id, expr) -> (
     Printf.printf "%sVerDecl %s = " off_s id;
     dump ~offset:(offset+1) expr;
     Printf.printf "\n";
@@ -38,6 +43,10 @@ let rec dump ?(offset=0) a =
   | IntLiteral v -> Printf.printf "%d" v
   | FloatLiteral v -> Printf.printf "%f" v
   | BoolLiteral v -> Printf.printf "%b" v
-
+  | FuncCall(name, args) -> (
+    Printf.printf "%sFuncCall[ %s( " off_s name;
+    List.iter (fun x -> dump ~offset:(offset+1) x; Printf.printf ", ") args;
+    Printf.printf "%s) ]" off_s;
+  )
   | Id name -> Printf.printf "ID(%s)" name
   | _ -> Printf.printf "%sNot supported\n" off_s;
