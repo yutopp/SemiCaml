@@ -48,20 +48,50 @@ let rec lookup env name =
   | EItem(p_env, _, _, sym) -> find_retry p_env sym
   | ETerm(_, _) -> None
 
+type t =
+    GT
+  | LT
+  | GTE
+  | LTE
+  | EQ
+  | NEQ
+
+type operator =
+    Add of type_kind
+  | Sub of type_kind
+  | Mul of type_kind
+  | Div of type_kind
+  | OrLogic
+  | AndLogic
+  | Eq of type_kind
+  | NotEq of type_kind
+  | Gte of type_kind
+  | Gt of type_kind
+  | Lte of type_kind
+  | Lt of type_kind
+
+let make_op tag tk = match tag with
+    GT -> Gt tk
+  | LT -> Lt tk
+  | GTE -> Gte tk
+  | LTE -> Lte tk
+  | EQ -> Eq tk
+  | NEQ -> NotEq tk
+
 type a_ast =
     Flow of a_ast list
   | Term of ast * type_kind
-  | BinOp of a_ast * a_ast * type_kind
+  | BinOp of a_ast * a_ast * operator * type_kind
   | CallFunc of string * a_ast list * type_kind(* return type *)
   | VarDecl of string * a_ast * type_kind
-  | IdTerm of ast * string * type_kind
+  | IdTerm of string * type_kind
 
 exception InvaridAttributedAST
 
 let type_kind_of a = match a with
     Term(_, tk) -> tk
-  | BinOp(_, _, tk) -> tk
-  | IdTerm(_, _, tk) -> tk
+  | BinOp(_, _, _, tk) -> tk
+  | IdTerm(_, tk) -> tk
   | VarDecl(_, _, tk) -> tk
   | _ -> raise InvaridAttributedAST
 
@@ -129,20 +159,24 @@ let rec analyze' ast env ottk =
       Some ttk -> if tk = ttk then Term (ast, tk) else raise (SemanticError "is not matched")
     | None -> Term (ast, tk)
   in
-  let binary_op_check ast lhs rhs env tk =
+  let binary_op_check ast lhs rhs env op tk =
     let l = analyze' lhs env (Some tk) in
     let r = analyze' rhs env (Some tk) in
-    BinOp (l, r, tk)
+    BinOp (l, r, op, tk)
   in
-  let cond_binary_op ast lhs rhs env =
+  let cond_binary_op ast lhs rhs env tag =
     let l = analyze' lhs env None in
     let r = analyze' rhs env None in
-    BinOp (l, r, Boolean)
+    let op = match (type_kind_of l, type_kind_of r) with
+        (Int, Int) -> make_op tag Int
+      | (_, _) -> raise (SemanticError "invalid binary operation")
+    in
+    BinOp (l, r, op, Boolean)
   in
-  let logic_binary_op ast lhs rhs env =
+  let logic_binary_op ast lhs rhs env op =
     let l = analyze' lhs env (Some Boolean) in
     let r = analyze' rhs env (Some Boolean) in
-    BinOp (l, r, Boolean)
+    BinOp (l, r, op, Boolean)
   in
   let get_id_and_tk env = match env with
       EItem (_, id, tk, _) -> (id, tk)
@@ -169,25 +203,25 @@ let rec analyze' ast env ottk =
   )
   | ExprStmt expr -> analyze' expr env None
 
-  | LogicOrExpr(lhs, rhs) -> logic_binary_op ast lhs rhs env
-  | LogicAndExpr(lhs, rhs) -> logic_binary_op ast lhs rhs env
+  | LogicOrExpr(lhs, rhs) -> logic_binary_op ast lhs rhs env OrLogic
+  | LogicAndExpr(lhs, rhs) -> logic_binary_op ast lhs rhs env AndLogic
 
-  | EqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env
-  | NotEqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env
+  | EqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env EQ
+  | NotEqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env NEQ
 
-  | LessExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env
-  | LessEqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env
-  | GreaterExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env
-  | GreaterEqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env
+  | LessExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env LT
+  | LessEqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env LTE
+  | GreaterExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env GT
+  | GreaterEqualExpr(lhs, rhs) -> cond_binary_op ast lhs rhs env GTE
 
-  | AddIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Int
-  | SubIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Int
-  | MulIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Int
-  | DivIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Int
-  | AddFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Float
-  | SubFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Float
-  | MulFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Float
-  | DivFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env Float
+  | AddIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Add Int) Int
+  | SubIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Sub Int) Int
+  | MulIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Mul Int) Int
+  | DivIntExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Div Int) Int
+  | AddFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Add Float) Float
+  | SubFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Sub Float) Float
+  | MulFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Mul Float) Float
+  | DivFloatExpr(lhs, rhs) -> binary_op_check ast lhs rhs env (Div Float) Float
 
   | IntLiteral _ -> term_check ast Int ottk
   | FloatLiteral _ -> term_check ast Float ottk
@@ -219,7 +253,7 @@ let rec analyze' ast env ottk =
     let oe = lookup env name in
     match oe with
       Some e -> let id, tk = get_id_and_tk e in
-                IdTerm (ast, id, tk)
+                IdTerm (id, tk)
     | None -> raise (SemanticError "id was not found")
   )
   | _ -> raise (SemanticError "unsupported")
