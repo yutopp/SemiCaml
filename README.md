@@ -1,3 +1,9 @@
+# Requirement
+
++ OCaml
++ LLVM
++ GCC (or Clang)
+
 # build
 ```
 opam update
