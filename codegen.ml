@@ -164,8 +164,8 @@ exception FailedToBuildExecutable
 let create_executable m =
   let bc_wrote = LBW.write_bitcode_file m "a.bc" in
   if not bc_wrote then raise FailedToWriteBitcode;
-  let sc = Sys.command "llc a.bc" in
+  let sc = Sys.command "llc -filetype=obj a.bc" in
   if sc <> 0 then raise FailedToBuildBitcode;
-  let sc = Sys.command "g++ a.s libsemiruntime.a" in
+  let sc = Sys.command "g++ a.o libsemiruntime.a" in
   if sc <> 0 then raise FailedToBuildExecutable;
   ()
