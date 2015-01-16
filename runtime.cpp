@@ -7,7 +7,7 @@ extern "C" {
 
 int main()
 {
-    // jump intp SemiCaml world
+    // jump into SemiCaml world
     _semi_caml_entry();
 }
 
