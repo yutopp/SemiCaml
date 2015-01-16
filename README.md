@@ -1,17 +1,17 @@
 # Requirement
 
-+ OCaml
-+ LLVM
-+ GCC (or Clang)
++ OCaml 
++ LLVM [>= 3.5]
++ GCC (or Clang) [supports C++11]
 
-# build
+# How to build
 ```
 opam update
 opam install omake llvm
 omake
 ```
 
-# usage
+# Usage
 ```
 ./semicaml
 ```
