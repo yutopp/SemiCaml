@@ -1,11 +1,13 @@
 type ast =
     Program of ast list
-  | Seq of ast list
-  | VerDecl of string * ast
-  | FuncDecl of string * string list * ast
+
+  | VerDecl of string * ast * ast option
+  | FuncDecl of string * string list * ast * ast option
+
+  | Sequence of ast * ast
+
   | ArrayNew of string * ast
   | CondExpr of ast * ast * ast
-  | ExprStmt of ast
 
   | LogicOrExpr of ast * ast
   | LogicAndExpr of ast * ast

@@ -1,22 +1,18 @@
 open Ast
 
-(* rest *)
-(* type ast = *)
-(*     Program of ast list *)
-(*   | Seq of ast list *)
-(*   | VerDecl of string * ast ignore *)
-(*   | FuncDecl of string * string list * ast *)
-(*   | ArrayNew of string * ast *) 
 
-(*   | ArrayGet of string * ast *)
-(*   | ArrayAssign of string * ast * ast *)
-(*   | FuncCall of string * ast list *)
        
 type value =
   | IntVal of int
   | FloatVal of float
   | BoolVal of bool
   | StringVal of string
+
+let printer values = match values with
+  | IntVal n -> print_int n; print_newline ()
+  | FloatVal n -> print_float n; print_newline ()
+  (* | BoolVal b ->  *)
+  | StringVal s -> print_string s; print_newline ()
 
 type constant_folder = {
   int : int -> int -> bool;
@@ -43,28 +39,26 @@ let rec eval input env =
     | (BoolVal b1, BoolVal b2) -> BoolVal (f.bool b1 b2)
     | _ -> failwith "bool value expected"
   in
-  let equal =
-    { int = ( = ); float = ( = ); bool = ( = ) }
-  in
-  let not_equal =
-    { int = ( <> ); float = ( <> ); bool = ( <> ) }
-  in
-  let less =
-    { int = ( < ); float = ( < ); bool = ( < ) }
-  in
-  let less_equal = 
-    { int = ( <= ); float = ( <= ); bool = ( <= ) }
-  in
-  let greater =
-    { int = ( > ); float = ( > ); bool = ( > ) }
-  in
-  let greater_equal = 
-    { int = ( >= ); float = ( >= ); bool = ( >= ) }
-  in
+  let eq = { int = ( = ); float = ( = ); bool = ( = ) } in
+  let neq = { int = ( <> ); float = ( <> ); bool = ( <> ) } in
+  let lt = { int = ( < ); float = ( < ); bool = ( < ) } in
+  let lte = { int = ( <= ); float = ( <= ); bool = ( <= ) } in
+  let gt = { int = ( > ); float = ( > ); bool = ( > ) } in
+  let gte =  { int = ( >= ); float = ( >= ); bool = ( >= ) } in
   match input with
   | IntLiteral n -> IntVal n
   | FloatLiteral n -> FloatVal n
   | BoolLiteral b -> BoolVal b
+
+  (* | Seq elist -> *)
+  (*    begin  *)
+  (*      match elist with          *)
+  (*      | head :: rest -> SeqVal (eval head env :: (eval rest env)) *)
+  (*      | _ -> failwith "ast list expected" *)
+  (*    end *)
+  (* | VerDecl (s,e1) -> eval e1 (env_ext env s (eval e1)) *)
+  (* | FuncDecl (name,args,e1) = *)
+  (* | ArrayNew (str,e1) ->  *)
                              
   | AddIntExpr (e1,e2) -> intop ( + ) e1 e2
   | SubIntExpr (e1,e2) -> intop ( - ) e1 e2
@@ -79,30 +73,32 @@ let rec eval input env =
                                     
   | LogicOrExpr (e1,e2) -> boolop ( || ) e1 e2
   | LogicAndExpr (e1,e2) -> boolop ( && ) e1 e2                                    
-  | EqualExpr (e1,e2) -> compop ( equal ) e1 e2
-  | NotEqualExpr (e1,e2) -> compop ( not_equal ) e1 e2
-  | LessExpr (e1,e2) -> compop ( less ) e1 e2
-  | LessEqualExpr (e1,e2) -> compop ( less_equal ) e1 e2
-  | GreaterExpr (e1,e2) -> compop ( greater ) e1 e2
-  | GreaterEqualExpr (e1,e2) -> compop ( greater_equal ) e1 e2
+  | EqualExpr (e1,e2) -> compop ( eq ) e1 e2
+  | NotEqualExpr (e1,e2) -> compop ( neq ) e1 e2
+  | LessExpr (e1,e2) -> compop ( lt ) e1 e2
+  | LessEqualExpr (e1,e2) -> compop ( lte ) e1 e2
+  | GreaterExpr (e1,e2) -> compop ( gt ) e1 e2
+  | GreaterEqualExpr (e1,e2) -> compop ( gte ) e1 e2
                                        
   | CondExpr (e1,e2,e3) ->
-     (match (eval e1 env) with
-      | BoolVal true -> eval e2 env
-      | BoolVal false -> eval e3 env
-      | _ -> failwith "first exp bool value expected"
-     )
-  (* | VerDecl (s,e1) -> eval e1 (env_ext env s (eval e1)) *)
+     begin
+       match (eval e1 env) with
+       | BoolVal true -> eval e2 env
+       | BoolVal false -> eval e3 env
+       | _ -> failwith "first exp bool value expected"
+     end 
   | _ -> failwith "unknown exp"
+                  
+let emptyenv () = Hashtbl.create 10
 
-module MyMap = Map.Make(String)
+let env_ext env x v = Hashtbl.add env x v 
+                                  
+let lookup x env = Hashtbl.find env x
+                                
+                                
+let rec interpreter input =
+  printer (eval input (emptyenv ()))
 
-let emptyenv () = MyMap.empty
-
-let env_ext env x v = MyMap.add x v env
-
-let lookup x env = MyMap.find x env
-                    
 let _ = eval (AddIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 5                
 let _ = eval (AddIntExpr (AddIntExpr (IntLiteral 3, IntLiteral 3), IntLiteral 2)) (emptyenv ()) = IntVal 8                
 let _ = eval (SubIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 1                
@@ -159,3 +155,13 @@ let _ = eval (CondExpr (EqualExpr (IntLiteral 3, IntLiteral 3),
 let _ = eval (CondExpr (GreaterExpr (IntLiteral 3, IntLiteral 3),                            
                         (MulIntExpr (IntLiteral 2, IntLiteral 3)),                           
                         (DivIntExpr (IntLiteral 10, IntLiteral 2)))) (emptyenv ())              = IntVal 5
+
+let _ = eval (AddIntExpr (CondExpr (EqualExpr (IntLiteral 3, IntLiteral 3),
+                                    (MulIntExpr (IntLiteral 2, IntLiteral 2)),
+                                    (DivIntExpr (IntLiteral 10, IntLiteral 2))),
+                          IntLiteral 3)) (emptyenv ())                
+
+let _ = eval (AddIntExpr (CondExpr (EqualExpr (IntLiteral 3, IntLiteral 2),
+                                    (MulIntExpr (IntLiteral 2, IntLiteral 2)),
+                                    (DivIntExpr (IntLiteral 10, IntLiteral 2))),
+                          IntLiteral 3)) (emptyenv ())

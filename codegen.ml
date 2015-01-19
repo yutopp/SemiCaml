@@ -12,15 +12,18 @@ let void_ty = L.void_type context
 let val_table: (string, L.llvalue) Hashtbl.t = Hashtbl.create 10
 
 exception NotSupportedNode
+exception UnexpectedType
 
 let to_llvm_ty tk = match tk with
     A.Int -> i32_ty
   | A.String -> void_ty
   | A.Array itk -> void_ty
+  | A.Func px -> void_ty
   | A.IntrinsicFunc (name, params) -> void_ty
   | A.Float -> void_ty
   | A.Boolean -> void_ty
   | A.Unit -> void_ty
+  | A.Undefined -> raise UnexpectedType
 
 exception InvalidOp
 
@@ -102,24 +105,29 @@ let rec make_llvm_ir aast = match aast with
     | Ast.BoolLiteral v -> L.const_int i32_ty 21
     | _ -> raise NotSupportedNode
   )
-  | A.VarDecl(id, expr, tk) -> (
-    let v = make_llvm_ir expr in
-    let alloca_inst = L.build_alloca (to_llvm_ty tk) "" builder in
-    let _ = L.build_store v alloca_inst builder in
-    Hashtbl.add val_table id alloca_inst;
-    alloca_inst
-  )
+  | A.VarDecl(id, expr, tk, in_clause) ->
+     begin
+       let v = make_llvm_ir expr in
+       let alloca_inst = L.build_alloca (to_llvm_ty tk) "" builder in
+       let _ = L.build_store v alloca_inst builder in
+       Hashtbl.add val_table id alloca_inst;
+       match in_clause with
+         Some a -> make_llvm_ir a
+       | None -> alloca_inst
+     end
   | A.BinOp(lhs, rhs, op, tk) -> (
     let l = make_llvm_ir lhs in
     let r = make_llvm_ir rhs in
     make_binary_op l r op
   )
   | A.CallFunc(id, args, tk) -> (
+    Printf.printf "CallFunc\n";
     let f = Hashtbl.find val_table id in
     let e_args = List.map (fun a -> make_llvm_ir a) args in
     L.build_call f (Array.of_list e_args) "" builder
   )
   | A.IdTerm(id, tk) -> (
+    Printf.printf "IdTerm\n";
     let v = Hashtbl.find val_table id in
     L.build_load v "" builder
   )
