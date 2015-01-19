@@ -2,43 +2,43 @@ open Ast
 
 (* type ast = *)
 (*     Program of ast list *)
-
-  (* | VerDecl of string * ast * ast option *)
+                   
+(*   | VerDecl of string * ast * ast option (\* done *\) *)
 (*   | FuncDecl of string * string list * ast * ast option *)
 
 (*   | Sequence of ast * ast *)
 
 (*   | ArrayNew of string * ast *)
-(*   | CondExpr of ast * ast * ast *) 
+(*   | CondExpr of ast * ast * ast (\* done *\) *)
 
-(*   | LogicOrExpr of ast * ast *)
-(*   | LogicAndExpr of ast * ast *)
+(*   | LogicOrExpr of ast * ast    (\* done *\) *)
+(*   | LogicAndExpr of ast * ast   (\* done *\) *)
 
-(*   | EqualExpr of ast * ast *)
-(*   | NotEqualExpr of ast * ast *)
+(*   | EqualExpr of ast * ast      (\* done *\) *)
+(*   | NotEqualExpr of ast * ast   (\* done *\) *)
 
-(*   | LessExpr of ast * ast *)
-(*   | LessEqualExpr of ast * ast *)
-(*   | GreaterExpr of ast * ast *)
-(*   | GreaterEqualExpr of ast * ast *)
+(*   | LessExpr of ast * ast       (\* done *\) *)
+(*   | LessEqualExpr of ast * ast  (\* done *\) *)
+(*   | GreaterExpr of ast * ast    (\* done *\) *)
+(*   | GreaterEqualExpr of ast * ast (\* done *\) *)
 
-(*   | AddIntExpr of ast * ast *)
-(*   | SubIntExpr of ast * ast *)
-(*   | MulIntExpr of ast * ast *)
-(*   | DivIntExpr of ast * ast *)
-(*   | AddFloatExpr of ast * ast *)
-(*   | SubFloatExpr of ast * ast *)
-(*   | MulFloatExpr of ast * ast *)
-(*   | DivFloatExpr of ast * ast *)
+(*   | AddIntExpr of ast * ast     (\* done *\) *)
+(*   | SubIntExpr of ast * ast     (\* done *\) *)
+(*   | MulIntExpr of ast * ast     (\* done *\) *)
+(*   | DivIntExpr of ast * ast     (\* done *\) *)
+(*   | AddFloatExpr of ast * ast   (\* done *\) *)
+(*   | SubFloatExpr of ast * ast   (\* done *\) *)
+(*   | MulFloatExpr of ast * ast   (\* done *\) *)
+(*   | DivFloatExpr of ast * ast   (\* done *\) *)
 
-(*   | IntLiteral of int *)
-(*   | FloatLiteral of float *)
-(*   | BoolLiteral of bool *)
+(*   | IntLiteral of int           (\* done *\) *)
+(*   | FloatLiteral of float       (\* done *\) *)
+(*   | BoolLiteral of bool         (\* done *\) *)
 
 (*   | ArrayGet of string * ast *)
 (*   | ArrayAssign of string * ast * ast *)
 (*   | FuncCall of string * ast list *)
-(*   | Id of string *)
+(*   | Id of string                (\* done *\) *)
 
 (* todo *)
 (* return type to ast *)
@@ -94,16 +94,11 @@ let rec eval input env =
   | IntLiteral n -> IntVal n
   | FloatLiteral n -> FloatVal n
   | BoolLiteral b -> BoolVal b
-  (* | Id str -> IDVal str *)
-  (* | Seq elist -> *)
-  (*    begin  *)
-  (*      match elist with          *)
-  (*      | head :: rest -> SeqVal (eval head env :: (eval rest env)) *)
-  (*      | _ -> failwith "ast list expected" *)
-  (*    end *)
+  | Id id -> lookup id env
+  (* | Sequence (ehead,erest) ->  *)
   | VerDecl (id,e1,Some e2) -> eval e2 (env_ext env id (eval e1 env))
   | VerDecl (id,e1,None) -> lookup id (env_ext env id (eval e1 env))
-  (* | FuncDecl (name,args,e1) = *)
+  (* | FuncDecl (id,args,e1) = *)
   (* | ArrayNew (str,e1) ->  *)
                                    
   | AddIntExpr (e1,e2) -> intop ( + ) e1 e2
@@ -137,8 +132,14 @@ let rec eval input env =
               
 let rec interpreter input =
   printer (eval input (emptyenv ()))
-
-let _ = interpreter (VerDecl ("x",(IntLiteral 3), None))
+          
+          
+let _ = interpreter (VerDecl ("x", IntLiteral 3, None))                     
+let _ = interpreter (VerDecl ("x", IntLiteral 3, (Some (AddIntExpr(Id "x", IntLiteral 3)))))
+let _ = interpreter (VerDecl ("x", IntLiteral 3,
+                              (Some (VerDecl ("y", IntLiteral 5,
+                                              (Some (VerDecl ("x", IntLiteral 8,
+                                                              (Some (AddIntExpr (Id "x", Id "y")))))))))))
 
 (* let _ =  *)
           
