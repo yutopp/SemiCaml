@@ -3,7 +3,7 @@ open Ast
 (* type ast = *)
 (*     Program of ast list *)
 
-(*   | VerDecl of string * ast * ast option *)
+  (* | VerDecl of string * ast * ast option *)
 (*   | FuncDecl of string * string list * ast * ast option *)
 
 (*   | Sequence of ast * ast *)
@@ -47,21 +47,24 @@ type value =
   | IntVal of int
   | FloatVal of float
   | BoolVal of bool
-  | StringVal of string
-  | IDVal of string
 
 let printer values = match values with
-  | IntVal n -> print_int n; print_newline ()
-  | FloatVal n -> print_float n; print_newline ()
-  (* | BoolVal b ->  *)
-  | StringVal s -> print_string s; print_newline ()
+  | IntVal n -> Printf.printf "IntVal %d\n" n
+  | FloatVal n -> Printf.printf "FloatVal %f\n" n
+  | BoolVal b -> Printf.printf "FloatVal %b\n" b
 
 type constant_folder = {
   int : int -> int -> bool;
   float : float -> float -> bool;
   bool : bool -> bool -> bool;
 }
-                 
+
+let emptyenv () = Hashtbl.create 10
+
+let env_ext env x v = Hashtbl.add env x v; env
+                                  
+let lookup x env = Hashtbl.find env x                                
+                         
 let rec eval input env =
   let intop f e1 e2 = match (eval e1 env, eval e2 env) with
     | (IntVal n1, IntVal n2) -> IntVal (f n1 n2)
@@ -91,18 +94,18 @@ let rec eval input env =
   | IntLiteral n -> IntVal n
   | FloatLiteral n -> FloatVal n
   | BoolLiteral b -> BoolVal b
-
+  (* | Id str -> IDVal str *)
   (* | Seq elist -> *)
   (*    begin  *)
   (*      match elist with          *)
   (*      | head :: rest -> SeqVal (eval head env :: (eval rest env)) *)
   (*      | _ -> failwith "ast list expected" *)
   (*    end *)
-  (* | VerDecl (id,e1,Some e2) ->  *)
-  (* | VerDecl (id,e1,None) ->  *)
+  | VerDecl (id,e1,Some e2) -> eval e2 (env_ext env id (eval e1 env))
+  | VerDecl (id,e1,None) -> lookup id (env_ext env id (eval e1 env))
   (* | FuncDecl (name,args,e1) = *)
   (* | ArrayNew (str,e1) ->  *)
-                             
+                                   
   | AddIntExpr (e1,e2) -> intop ( + ) e1 e2
   | SubIntExpr (e1,e2) -> intop ( - ) e1 e2
   | MulIntExpr (e1,e2) -> intop ( * ) e1 e2
@@ -129,18 +132,14 @@ let rec eval input env =
        | BoolVal true -> eval e2 env
        | BoolVal false -> eval e3 env
        | _ -> failwith "first exp bool value expected"
-     end 
-  | _ -> failwith "unknown exp"
-                  
-let emptyenv () = Hashtbl.create 10
-
-let env_ext env x v = Hashtbl.add env x v; env
-                                  
-let lookup x env = Hashtbl.find env x                                
-                                
+     end
+  | _ -> failwith "unknown exp"                  
+              
 let rec interpreter input =
   printer (eval input (emptyenv ()))
 
+(* let _ =  *)
+          
 let _ = eval (AddIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 5                
 let _ = eval (AddIntExpr (AddIntExpr (IntLiteral 3, IntLiteral 3), IntLiteral 2)) (emptyenv ()) = IntVal 8                
 let _ = eval (SubIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 1                
@@ -163,7 +162,7 @@ let _ = eval (EqualExpr (FloatLiteral 3., FloatLiteral 3.)) (emptyenv ())       
 let _ = eval (EqualExpr (FloatLiteral 3., FloatLiteral 2.)) (emptyenv ())                       = BoolVal false           
 let _ = eval (EqualExpr (BoolLiteral true, BoolLiteral false)) (emptyenv ())                    = BoolVal false           
 let _ = eval (EqualExpr (BoolLiteral true, BoolLiteral true)) (emptyenv ())                     = BoolVal true             
-let _ = eval (EqualExpr (IntLiteral 3, BoolLiteral true)) (emptyenv ())  (* Exceptino Integer, Float or Bool values expected" *)
+let _ = eval (EqualExpr (IntLiteral 3, BoolLiteral true)) (emptyenv ())  (* Exceptino Integer, Float or Bool values expected *)
 
 let _ = eval (NotEqualExpr (IntLiteral 3, IntLiteral 3)) (emptyenv ())                          = BoolVal false 
 let _ = eval (NotEqualExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                          = BoolVal true 
