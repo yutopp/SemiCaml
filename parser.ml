@@ -3,13 +3,13 @@ open Ast
 let parse filename =
   Program [
       (* let f a b = a + b *)
-      (*FuncDecl (
+      FuncDecl (
           "f",
           ["a"; "b"],
           AddIntExpr (Id "a", Id "b"),
           None
         );
-       *)
+
 
       (* let a = 1 in print_int (a + 6) *)
       VerDecl (
@@ -25,7 +25,7 @@ let parse filename =
             )
         );
 
-      (*
+
       (* let hoge = f 10 20 in print_int hoge *)
       VerDecl (
           "hoge",
@@ -46,6 +46,7 @@ let parse filename =
             )
         );
 
+      (*
       (* let f = let n = 10 in let g a = a + n in g *)
       VerDecl (
           "f",

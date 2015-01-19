@@ -25,6 +25,9 @@ let rec to_string tk = match tk with
 let dump_type_kind tk =
   Printf.printf "%s" (to_string tk)
 
+
+exception UnexpectedEnvKind
+
 type environment =
     EModule of symbol_table
   | ETemp of environment * symbol_table
@@ -32,6 +35,7 @@ type environment =
   | ETerm of string * type_kind
 
 and symbol_table = (string, environment) Hashtbl.t
+
 
 let rec lookup env name =
   let find sym =
@@ -52,7 +56,27 @@ let rec lookup env name =
   | EItem(p_env, _, _, sym) -> find_with_retry p_env sym
   | ETerm(_, _) -> None
 
+
 exception UnexpectedEnv
+
+let flatten_symbol_table: (string, environment) Hashtbl.t = Hashtbl.create 10
+let save_env_as_flat id env =
+  begin
+    try
+      let _ = Hashtbl.find flatten_symbol_table id in
+      Hashtbl.remove flatten_symbol_table id
+    with
+      _ -> ()
+  end;
+  Hashtbl.add flatten_symbol_table id env
+
+let find_tk_from_id id =
+  let env = Hashtbl.find flatten_symbol_table id in
+  match env with
+    EItem (_, _, tk, _) -> tk
+  | ETerm (_, tk) -> tk
+  | _ -> raise UnexpectedEnv
+
 
 let update_type sym id target tk =
   Hashtbl.remove sym id;
@@ -61,7 +85,9 @@ let update_type sym id target tk =
     | ETerm (s, _ ) -> ETerm (s, tk)
     | _ -> raise UnexpectedEnv
   in
-  Hashtbl.add sym id n
+  Hashtbl.add sym id n;
+  Printf.printf "NEW! %s: %s\n" id (to_string tk);
+  save_env_as_flat id n
 
 
 type t =
@@ -98,20 +124,29 @@ type a_ast =
     Flow of a_ast list
   | Term of ast * type_kind
   | BinOp of a_ast * a_ast * operator * type_kind
-  | CallFunc of string * a_ast list * type_kind(* return type *)
+  | CallFunc of string * a_ast list * type_kind
   | VarDecl of string * a_ast * type_kind * a_ast option
-  | FuncDecl of string * a_ast list * a_ast * type_kind(* * a_ast option*)
+  | FuncDecl of string * a_ast list * a_ast * type_kind * a_ast option
   | IdTerm of string * type_kind
   | ANone
 
 exception InvaridAttributedAST
 
 let type_kind_of a = match a with
-    Term(_, tk) -> tk
-  | BinOp(_, _, _, tk) -> tk
-  | IdTerm(_, tk) -> tk
-  | VarDecl(_, _, tk, None) -> tk
+    Term (_, tk) -> tk
+  | BinOp (_, _, _, tk) -> tk
+  | CallFunc (_, _, tk) -> tk
+  | VarDecl (_, _, tk, None) -> tk
+  | FuncDecl (_, _, _, tk, None) -> tk
+  | IdTerm (_, tk) -> tk
   | _ -> raise InvaridAttributedAST
+
+let get_id_of a = match a with
+    CallFunc (id, _, _) -> id
+  | VarDecl (id, _, _, _) -> id
+  | FuncDecl (id, _, _, _, _) -> id
+  | IdTerm (id, _) -> id
+  | _ -> raise UnexpectedEnvKind
 
 
 let rec dump_env ?(offset=0) env = match env with
@@ -121,12 +156,18 @@ let rec dump_env ?(offset=0) env = match env with
   )
   | ETemp(_, sym) -> (
   )
-  | EItem(_, id, tk, sym) -> (
-    dump_type_kind tk;
-    Printf.printf " - id(%s)\n" id;
-    dump_sym ~offset:(offset+1) sym
-  )
-  | ETerm (id, tk) -> dump_type_kind tk
+  | EItem(_, id, tk, sym) ->
+     begin
+       dump_type_kind tk;
+       Printf.printf " - id(%s)\n" id;
+       dump_sym ~offset:(offset+1) sym
+     end
+
+  | ETerm (id, tk) ->
+     begin
+       dump_type_kind tk;
+       Printf.printf " - id(%s)\n" id;
+     end
 
 and dump_sym ?(offset=0) sym =
   let off_s = String.make (offset*2) ' ' in
@@ -158,21 +199,32 @@ let save_item parent_env name tk target_sym =
   let new_env = EItem(parent_env, id, tk, target_sym) in
 
   Hashtbl.add p_sym name new_env;
+  save_env_as_flat id  new_env;
+
   index := !index + 1;
   id
 
 let save_term_item parent_env name tk =
   let p_sym = get_sym_table parent_env in
   let id = Printf.sprintf "%s.%d" name !index in
-  let new_env = ETerm (name, tk) in
+  Printf.printf "id: %s\n" id;
+  let new_env = ETerm (id, tk) in
 
   Hashtbl.add p_sym name new_env;
+  save_env_as_flat id new_env;
+
   index := !index + 1;
   id
 
-let get_type_kind a = match a with
-    Term(_, tk) -> tk
-  | _ -> Unit
+
+let save_intrinsic_term_item parent_env name tk =
+  let p_sym = get_sym_table parent_env in
+  let new_env = ETerm (name, tk) in
+
+  Hashtbl.add p_sym name new_env;
+
+  name
+
 
 
 exception SemanticError of string
@@ -207,38 +259,62 @@ let rec analyze' ast env ottk =
     | _ -> raise (SemanticError "[ice] invalid env kind")
   in
   match ast with
-  | VerDecl (name, expr, in_clause) ->
+    VerDecl (name, expr, in_clause) ->
+    begin
+      let inner_env = make_tmp_env env in
+      let attr_ast = analyze' expr inner_env None in
+      let tk = type_kind_of attr_ast in
+      match in_clause with
+        Some a ->
+        begin
+          let dummy_id = save_item inner_env name tk (get_sym_table inner_env) in
+          let c_a = analyze' a inner_env None in
+          VarDecl (dummy_id, attr_ast, tk, Some c_a)
+        end
+      | None ->
+         begin
+           let id = save_item env name tk (get_sym_table inner_env) in
+           VarDecl (id, attr_ast, tk, None)
+         end
+    end
+
+  | FuncDecl (name, params, expr, in_clause) ->
      begin
-       let inner_env = make_tmp_env env in
-       let attr_ast = analyze' expr inner_env None in
-       let tk = get_type_kind attr_ast in
+       let decl_param_var v_name f_env =
+         let tk = Undefined in
+         let id = save_term_item f_env v_name tk in
+         Printf.printf "> %s\n" id;
+         VarDecl (id, ANone, tk, None)
+       in
+       let complete_param aast = match aast with
+           VarDecl (id, inner, tk, None) ->
+           begin
+             Printf.printf "%s: %s [%s]\n" id (to_string tk) (to_string (find_tk_from_id id));
+             VarDecl (id, ANone, find_tk_from_id id, None)
+           end
+         | _ -> raise (SemanticError "[ice]")
+       in
+       let f_env = make_tmp_env env in
+       let incomplete_param_envs = List.map (fun p -> decl_param_var p f_env) params in
+       let attr_ast = analyze' expr f_env None in
+       let ret_tk = type_kind_of attr_ast in
+       Printf.printf "ret ty: %s\n" (to_string ret_tk);
+       let param_nodes = List.map (fun a -> complete_param a) incomplete_param_envs in
+       let tk = Func ((List.map (fun a -> type_kind_of a) param_nodes) @ [ret_tk]) in
        match in_clause with
          Some a ->
          begin
-           let dummy_id = save_item inner_env name tk (get_sym_table inner_env) in
-           let c_a = analyze' a inner_env None in
-           VarDecl (dummy_id, attr_ast, tk, Some c_a)
+           let dummy_id = save_item f_env name tk (get_sym_table f_env) in
+           let c_a = analyze' a f_env None in
+           FuncDecl (dummy_id, param_nodes, attr_ast, tk, Some c_a)
          end
        | None ->
           begin
-            let id = save_item env name tk (get_sym_table inner_env) in
-            VarDecl (id, attr_ast, tk, None)
+            let id = save_item env name tk (get_sym_table f_env) in
+            FuncDecl (id, param_nodes, attr_ast, tk, None)
           end
      end
-  | FuncDecl (name, params, expr, in_clause) -> (
-    let decl_param_var v_name f_env =
-      let tk = Undefined in
-      let id = save_term_item f_env v_name tk in
-      VarDecl (id, ANone, tk, None)
-    in
-    let f_env = make_tmp_env env in
-    let param_nodes = List.map (fun p -> decl_param_var p f_env) params in
-    let attr_ast = analyze' expr f_env None in
-    let ret_tk = get_type_kind attr_ast in
-    let tk = Func ((List.map (fun a -> get_type_kind a) param_nodes) @ [ret_tk]) in
-    let id = save_item env name tk (get_sym_table f_env) in
-    FuncDecl (id, param_nodes, attr_ast, tk)
-  )
+
   | CondExpr (cond, a, b) -> (
     let cond_attr = analyze' cond env (Some Boolean) in
     if (type_kind_of cond_attr) = Boolean then (
@@ -274,28 +350,33 @@ let rec analyze' ast env ottk =
   | FloatLiteral _ -> term_check ast Float ottk
   | BoolLiteral _ -> term_check ast Boolean ottk
 
-  | FuncCall(name, args) -> (
-    let call_function e id params =
-      let params_len = List.length params in
-      if List.length params < 1 then raise (SemanticError "Function must have at least 1 param");
-      if List.length args <> (params_len - 1) then raise (SemanticError "langth of args and params is different");
-      (* check semantics of args *)
-      let a_args = List.mapi (fun i a -> analyze' a env (Some (List.nth params i))) args in
-      CallFunc (id, a_args, (List.nth params (params_len - 1)))
-    in
-    let oe = lookup env name in
-    match oe with
-      Some (e, _) -> (
-      match e with
-        ETerm (id, tk) -> (
-        match tk with
-          IntrinsicFunc(_, params) -> call_function e id params
-        | _ -> raise (SemanticError "function is not callable")
-      )
-      | _ -> raise (SemanticError "[ice] invalid env kind")
-    )
-    | None -> raise (SemanticError "function id was not found")
-  )
+  | FuncCall(name, args) ->
+     begin
+       let call_function e id params =
+         let params_len = List.length params in
+         if List.length params < 1 then raise (SemanticError "Function must have at least 1 param");
+         if List.length args <> (params_len - 1) then raise (SemanticError "langth of args and params is different");
+         (* check semantics of args *)
+         let a_args = List.mapi (fun i a -> analyze' a env (Some (List.nth params i))) args in
+         CallFunc (id, a_args, (List.nth params (params_len - 1)))
+       in
+       let oe = lookup env name in
+       match oe with
+         Some (e, _) ->
+         begin
+           let apply id tk = match tk with
+               Func params -> call_function e id params
+             | IntrinsicFunc (_, params) -> call_function e id params
+             | _ -> raise (SemanticError "function is not callable")
+           in
+           match e with
+             EItem (_, id, tk, _) -> apply id tk
+           | ETerm (id, tk) -> apply id tk
+           | _ -> raise (SemanticError "[ice] invalid env kind")
+         end
+       | None -> raise (SemanticError "function id was not found")
+     end
+
   | Id name -> (
     let oe = lookup env name in
     match oe with
@@ -305,6 +386,8 @@ let rec analyze' ast env ottk =
         match ottk with
           Some ttk ->
           begin
+            Printf.printf ">> %s\n" id;
+
             if tk = Undefined then
               begin
                 (* update typekind... *)
@@ -324,7 +407,7 @@ let rec analyze' ast env ottk =
 
 let analyze ast =
   let env = EModule (Hashtbl.create 10) in
-  ignore (save_term_item env "print_int" (IntrinsicFunc ("print", [Int; Unit])));
+  ignore (save_intrinsic_term_item env "print_int" (IntrinsicFunc ("print", [Int; Unit])));
 
   let attr_ast = match ast with
       Program xs -> Flow (List.map (fun x -> analyze' x env None) xs)
