@@ -2,34 +2,113 @@ open Ast
 
 let parse filename =
   Program [
-      Seq [
-          VerDecl("a", IntLiteral 1);
-          ExprStmt (FuncCall ("print_int", [AddIntExpr(Id("a"), IntLiteral 6)]))
-        ]
+      (* let f a b = a + b *)
+      (*FuncDecl (
+          "f",
+          ["a"; "b"],
+          AddIntExpr (Id "a", Id "b"),
+          None
+        );
+       *)
+
+      (* let a = 1 in print_int (a + 6) *)
+      VerDecl (
+          "a",
+          IntLiteral 1,
+          Some (
+              FuncCall (
+                  "print_int",
+                  [
+                    AddIntExpr (Id "a", IntLiteral 6)
+                  ]
+                )
+            )
+        );
+
+      (*
+      (* let hoge = f 10 20 in print_int hoge *)
+      VerDecl (
+          "hoge",
+          FuncCall (
+              "f",
+              [
+                IntLiteral 10;
+                IntLiteral 20;
+              ]
+            ),
+          Some (
+              FuncCall (
+                  "print_int",
+                  [
+                    Id "hoge"
+                  ]
+                )
+            )
+        );
+
+      (* let f = let n = 10 in let g a = a + n in g *)
+      VerDecl (
+          "f",
+          VerDecl (
+              "n",
+              IntLiteral 10,
+              Some (
+                  FuncDecl (
+                      "g",
+                      ["a"],
+                      AddIntExpr (Id "a", Id "n"),
+                      Some (
+                          Id "g"
+                        )
+                    )
+                )
+            ),
+          None
+        )
+       *)
     ]
 
 let rec dump ?(offset=0) a =
   let off_s = String.make (offset*2) ' ' in
   match a with
-    Program xs -> (
-    Printf.printf "%sProgram[\n" off_s;
-    List.iter (fun x -> dump ~offset:(offset+1) x) xs;
-    Printf.printf "%s]\n" off_s;
-  )
-  | Seq xs -> (
-    Printf.printf "%sSequence[\n" off_s;
-    List.iter (fun x -> dump ~offset:(offset+1) x; Printf.printf "%s,\n" off_s) xs;
-    Printf.printf "%s]\n" off_s;
-  )
-  | VerDecl (id, expr) -> (
-    Printf.printf "%sVerDecl %s = " off_s id;
-    dump ~offset:(offset+1) expr;
-    Printf.printf "\n";
-  )
-  | FuncDecl( id, args, body ) -> (
-    Printf.printf "%sFuncDecl\n" off_s;
-  )
-  | ExprStmt ast -> Printf.printf "%sExp: " off_s; dump ast; Printf.printf "\n";
+    Program xs ->
+    begin
+      Printf.printf "%sProgram[\n" off_s;
+      List.iter (fun x -> Printf.printf "%s  " off_s; dump ~offset:(offset+2) x) xs;
+      Printf.printf "%s]\n" off_s;
+    end
+
+  | VerDecl (name, expr, in_clause) ->
+     begin
+       Printf.printf "let(var) %s = " name;
+       dump ~offset:(offset+1) expr;
+       match in_clause with
+         Some a ->
+         begin
+           Printf.printf " in\n";
+           Printf.printf "%s" off_s;
+           dump ~offset:(offset+1) a;
+           Printf.printf "\n";
+         end
+       | None -> Printf.printf "\n";
+     end
+
+  | FuncDecl (name, params, expr, in_clause) ->
+     begin
+       Printf.printf "let(func) %s " name;
+       List.iter (fun id -> Printf.printf "%s " id) params;
+       Printf.printf "= ";
+       dump ~offset:(offset+1) expr;
+       match in_clause with
+         Some a ->
+         begin
+           Printf.printf " in\n";
+           Printf.printf "%s" off_s;
+           dump ~offset:(offset+1) a;
+           Printf.printf "\n";
+         end
+       | None -> Printf.printf "\n";
+     end
 
   | AddIntExpr(lhs, rhs) -> dump(lhs); Printf.printf " + "; dump(rhs)
   | SubIntExpr(lhs, rhs) -> dump(lhs); Printf.printf " - "; dump(rhs)
@@ -44,9 +123,9 @@ let rec dump ?(offset=0) a =
   | FloatLiteral v -> Printf.printf "%f" v
   | BoolLiteral v -> Printf.printf "%b" v
   | FuncCall(name, args) -> (
-    Printf.printf "%sFuncCall[ %s( " off_s name;
+    Printf.printf "invoke[%s]( " name;
     List.iter (fun x -> dump ~offset:(offset+1) x; Printf.printf ", ") args;
-    Printf.printf "%s) ]" off_s;
+    Printf.printf ")";
   )
   | Id name -> Printf.printf "ID(%s)" name
   | _ -> Printf.printf "%sNot supported\n" off_s;

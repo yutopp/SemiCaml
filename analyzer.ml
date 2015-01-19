@@ -4,19 +4,23 @@ type type_kind =
     Int
   | String
   | Array of type_kind
+  | Func of type_kind list
   | IntrinsicFunc of string * type_kind list
   | Float
   | Boolean
   | Unit
+  | Undefined
 
 let rec to_string tk = match tk with
     Int -> "int"
   | String -> "string"
   | Array inner -> "array<" ^ (to_string tk) ^ ">"
+  | Func px -> "function"
   | IntrinsicFunc (name, params) -> "intrinsic function"
   | Float -> "float"
   | Boolean -> "boolean"
   | Unit -> "unit"
+  | Undefined -> "!undefined"
 
 let dump_type_kind tk =
   Printf.printf "%s" (to_string tk)
@@ -32,11 +36,11 @@ and symbol_table = (string, environment) Hashtbl.t
 let rec lookup env name =
   let find sym =
     try
-      Some (Hashtbl.find sym name)
+      Some (Hashtbl.find sym name, sym)
     with
       Not_found -> None
   in
-  let find_retry p_env sym =
+  let find_with_retry p_env sym =
     let fe = find sym in
     match fe with
       None -> lookup p_env name
@@ -44,9 +48,21 @@ let rec lookup env name =
   in
   match env with
     EModule sym -> find sym
-  | ETemp(p_env, sym) -> find_retry p_env sym
-  | EItem(p_env, _, _, sym) -> find_retry p_env sym
+  | ETemp(p_env, sym) -> find_with_retry p_env sym
+  | EItem(p_env, _, _, sym) -> find_with_retry p_env sym
   | ETerm(_, _) -> None
+
+exception UnexpectedEnv
+
+let update_type sym id target tk =
+  Hashtbl.remove sym id;
+  let n = match target with
+      EItem (e, s, _, st) -> EItem (e, s, tk, st)
+    | ETerm (s, _ ) -> ETerm (s, tk)
+    | _ -> raise UnexpectedEnv
+  in
+  Hashtbl.add sym id n
+
 
 type t =
     GT
@@ -83,8 +99,10 @@ type a_ast =
   | Term of ast * type_kind
   | BinOp of a_ast * a_ast * operator * type_kind
   | CallFunc of string * a_ast list * type_kind(* return type *)
-  | VarDecl of string * a_ast * type_kind
+  | VarDecl of string * a_ast * type_kind * a_ast option
+  | FuncDecl of string * a_ast list * a_ast * type_kind(* * a_ast option*)
   | IdTerm of string * type_kind
+  | ANone
 
 exception InvaridAttributedAST
 
@@ -92,7 +110,7 @@ let type_kind_of a = match a with
     Term(_, tk) -> tk
   | BinOp(_, _, _, tk) -> tk
   | IdTerm(_, tk) -> tk
-  | VarDecl(_, _, tk) -> tk
+  | VarDecl(_, _, tk, None) -> tk
   | _ -> raise InvaridAttributedAST
 
 
@@ -105,7 +123,7 @@ let rec dump_env ?(offset=0) env = match env with
   )
   | EItem(_, id, tk, sym) -> (
     dump_type_kind tk;
-    Printf.printf "id(%s)" id;
+    Printf.printf " - id(%s)\n" id;
     dump_sym ~offset:(offset+1) sym
   )
   | ETerm (id, tk) -> dump_type_kind tk
@@ -114,7 +132,8 @@ and dump_sym ?(offset=0) sym =
   let off_s = String.make (offset*2) ' ' in
   Hashtbl.iter (fun k v ->
                 Printf.printf "%skey: %s :: " off_s k;
-                dump_env ~offset:(offset+1) v
+                dump_env ~offset:(offset+1) v;
+                Printf.printf "\n%s---------\n" off_s;
                ) sym
 
 exception InvaridEnv
@@ -144,8 +163,12 @@ let save_item parent_env name tk target_sym =
 
 let save_term_item parent_env name tk =
   let p_sym = get_sym_table parent_env in
+  let id = Printf.sprintf "%s.%d" name !index in
   let new_env = ETerm (name, tk) in
-  Hashtbl.add p_sym name new_env
+
+  Hashtbl.add p_sym name new_env;
+  index := !index + 1;
+  id
 
 let get_type_kind a = match a with
     Term(_, tk) -> tk
@@ -180,18 +203,43 @@ let rec analyze' ast env ottk =
   in
   let get_id_and_tk env = match env with
       EItem (_, id, tk, _) -> (id, tk)
+    | ETerm (id, tk) -> (id, tk)
     | _ -> raise (SemanticError "[ice] invalid env kind")
   in
   match ast with
-    Seq xs -> Flow(List.map (fun x -> analyze' x env None) xs)
-  | VerDecl(name, expr) -> (
-     let inner_env = make_tmp_env env in
-     let attr_ast = analyze' expr inner_env None in
-     let tk = get_type_kind attr_ast in
-     let id = save_item env name tk (get_sym_table inner_env) in
-     VarDecl (id, attr_ast, tk)
+  | VerDecl (name, expr, in_clause) ->
+     begin
+       let inner_env = make_tmp_env env in
+       let attr_ast = analyze' expr inner_env None in
+       let tk = get_type_kind attr_ast in
+       match in_clause with
+         Some a ->
+         begin
+           let dummy_id = save_item inner_env name tk (get_sym_table inner_env) in
+           let c_a = analyze' a inner_env None in
+           VarDecl (dummy_id, attr_ast, tk, Some c_a)
+         end
+       | None ->
+          begin
+            let id = save_item env name tk (get_sym_table inner_env) in
+            VarDecl (id, attr_ast, tk, None)
+          end
+     end
+  | FuncDecl (name, params, expr, in_clause) -> (
+    let decl_param_var v_name f_env =
+      let tk = Undefined in
+      let id = save_term_item f_env v_name tk in
+      VarDecl (id, ANone, tk, None)
+    in
+    let f_env = make_tmp_env env in
+    let param_nodes = List.map (fun p -> decl_param_var p f_env) params in
+    let attr_ast = analyze' expr f_env None in
+    let ret_tk = get_type_kind attr_ast in
+    let tk = Func ((List.map (fun a -> get_type_kind a) param_nodes) @ [ret_tk]) in
+    let id = save_item env name tk (get_sym_table f_env) in
+    FuncDecl (id, param_nodes, attr_ast, tk)
   )
-  | CondExpr(cond, a, b) -> (
+  | CondExpr (cond, a, b) -> (
     let cond_attr = analyze' cond env (Some Boolean) in
     if (type_kind_of cond_attr) = Boolean then (
       let a_attr = analyze' a env None in
@@ -201,7 +249,6 @@ let rec analyze' ast env ottk =
       else raise (SemanticError "types of rhs or lhs is different")
     ) else raise (SemanticError "condition must be 'boolean'")
   )
-  | ExprStmt expr -> analyze' expr env None
 
   | LogicOrExpr(lhs, rhs) -> logic_binary_op ast lhs rhs env OrLogic
   | LogicAndExpr(lhs, rhs) -> logic_binary_op ast lhs rhs env AndLogic
@@ -238,7 +285,7 @@ let rec analyze' ast env ottk =
     in
     let oe = lookup env name in
     match oe with
-      Some e -> (
+      Some (e, _) -> (
       match e with
         ETerm (id, tk) -> (
         match tk with
@@ -252,15 +299,32 @@ let rec analyze' ast env ottk =
   | Id name -> (
     let oe = lookup env name in
     match oe with
-      Some e -> let id, tk = get_id_and_tk e in
-                IdTerm (id, tk)
+      Some (e, sym) ->
+      begin
+        let id, tk = get_id_and_tk e in
+        match ottk with
+          Some ttk ->
+          begin
+            if tk = Undefined then
+              begin
+                (* update typekind... *)
+                update_type sym id e ttk;
+                IdTerm (id, ttk)
+              end
+            else if tk <> ttk then
+              raise (SemanticError "type missmatch")
+            else
+              IdTerm (id, tk)
+          end
+        | None -> IdTerm (id, tk)
+      end
     | None -> raise (SemanticError "id was not found")
   )
   | _ -> raise (SemanticError "unsupported")
 
 let analyze ast =
   let env = EModule (Hashtbl.create 10) in
-  save_term_item env "print_int" (IntrinsicFunc ("print", [Int; Unit]));
+  ignore (save_term_item env "print_int" (IntrinsicFunc ("print", [Int; Unit])));
 
   let attr_ast = match ast with
       Program xs -> Flow (List.map (fun x -> analyze' x env None) xs)
