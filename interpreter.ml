@@ -1,12 +1,54 @@
 open Ast
 
+(* type ast = *)
+(*     Program of ast list *)
 
+(*   | VerDecl of string * ast * ast option *)
+(*   | FuncDecl of string * string list * ast * ast option *)
+
+(*   | Sequence of ast * ast *)
+
+(*   | ArrayNew of string * ast *)
+(*   | CondExpr of ast * ast * ast *) 
+
+(*   | LogicOrExpr of ast * ast *)
+(*   | LogicAndExpr of ast * ast *)
+
+(*   | EqualExpr of ast * ast *)
+(*   | NotEqualExpr of ast * ast *)
+
+(*   | LessExpr of ast * ast *)
+(*   | LessEqualExpr of ast * ast *)
+(*   | GreaterExpr of ast * ast *)
+(*   | GreaterEqualExpr of ast * ast *)
+
+(*   | AddIntExpr of ast * ast *)
+(*   | SubIntExpr of ast * ast *)
+(*   | MulIntExpr of ast * ast *)
+(*   | DivIntExpr of ast * ast *)
+(*   | AddFloatExpr of ast * ast *)
+(*   | SubFloatExpr of ast * ast *)
+(*   | MulFloatExpr of ast * ast *)
+(*   | DivFloatExpr of ast * ast *)
+
+(*   | IntLiteral of int *)
+(*   | FloatLiteral of float *)
+(*   | BoolLiteral of bool *)
+
+(*   | ArrayGet of string * ast *)
+(*   | ArrayAssign of string * ast * ast *)
+(*   | FuncCall of string * ast list *)
+(*   | Id of string *)
+
+(* todo *)
+(* return type to ast *)
        
 type value =
   | IntVal of int
   | FloatVal of float
   | BoolVal of bool
   | StringVal of string
+  | IDVal of string
 
 let printer values = match values with
   | IntVal n -> print_int n; print_newline ()
@@ -56,7 +98,8 @@ let rec eval input env =
   (*      | head :: rest -> SeqVal (eval head env :: (eval rest env)) *)
   (*      | _ -> failwith "ast list expected" *)
   (*    end *)
-  (* | VerDecl (s,e1) -> eval e1 (env_ext env s (eval e1)) *)
+  (* | VerDecl (id,e1,Some e2) ->  *)
+  (* | VerDecl (id,e1,None) ->  *)
   (* | FuncDecl (name,args,e1) = *)
   (* | ArrayNew (str,e1) ->  *)
                              
@@ -91,10 +134,9 @@ let rec eval input env =
                   
 let emptyenv () = Hashtbl.create 10
 
-let env_ext env x v = Hashtbl.add env x v 
+let env_ext env x v = Hashtbl.add env x v; env
                                   
-let lookup x env = Hashtbl.find env x
-                                
+let lookup x env = Hashtbl.find env x                                
                                 
 let rec interpreter input =
   printer (eval input (emptyenv ()))
