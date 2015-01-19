@@ -138,6 +138,8 @@ let rec eval input env =
 let rec interpreter input =
   printer (eval input (emptyenv ()))
 
+let _ = interpreter (VerDecl ("x",(IntLiteral 3), None))
+
 (* let _ =  *)
           
 let _ = eval (AddIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 5                
@@ -146,7 +148,7 @@ let _ = eval (SubIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())            
 let _ = eval (MulIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 6                
 let _ = eval (SubIntExpr (MulIntExpr (IntLiteral 3, IntLiteral 2), IntLiteral 2)) (emptyenv ()) = IntVal 4                
 let _ = eval (DivIntExpr (IntLiteral 10, IntLiteral 2)) (emptyenv ())                           = IntVal 5                
-let _ = eval (DivIntExpr (IntLiteral 10, IntLiteral 0)) (emptyenv ()) (* Exception "0 Division" *)
+(* let _ = eval (DivIntExpr (IntLiteral 10, IntLiteral 0)) (emptyenv ()) (\* Exception "0 Division" *\) *)
                                                                                                   
 let _ = eval (AddFloatExpr (FloatLiteral 3.0, FloatLiteral 2.0)) (emptyenv ())                  = FloatVal 5.             
 let _ = eval (AddFloatExpr (AddFloatExpr(FloatLiteral 3., FloatLiteral 3.),                       
@@ -154,7 +156,7 @@ let _ = eval (AddFloatExpr (AddFloatExpr(FloatLiteral 3., FloatLiteral 3.),
 let _ = eval (SubFloatExpr (FloatLiteral 3., FloatLiteral 2.)) (emptyenv ())                    = FloatVal 1.             
 let _ = eval (MulFloatExpr (FloatLiteral 3., FloatLiteral 2.)) (emptyenv ())                    = FloatVal 6.             
 let _ = eval (DivFloatExpr (FloatLiteral 10., FloatLiteral 2.)) (emptyenv ())                   = FloatVal 5.             
-let _ = eval (DivFloatExpr (FloatLiteral 10., FloatLiteral 0.)) (emptyenv ()) (* Exception "0 Division" *)
+(* let _ = eval (DivFloatExpr (FloatLiteral 10., FloatLiteral 0.)) (emptyenv ()) (\* Exception "0 Division" *\) *)
                                                                                                   
 let _ = eval (EqualExpr (IntLiteral 3, IntLiteral 3)) (emptyenv ())                             = BoolVal true            
 let _ = eval (EqualExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                             = BoolVal false           
@@ -162,7 +164,7 @@ let _ = eval (EqualExpr (FloatLiteral 3., FloatLiteral 3.)) (emptyenv ())       
 let _ = eval (EqualExpr (FloatLiteral 3., FloatLiteral 2.)) (emptyenv ())                       = BoolVal false           
 let _ = eval (EqualExpr (BoolLiteral true, BoolLiteral false)) (emptyenv ())                    = BoolVal false           
 let _ = eval (EqualExpr (BoolLiteral true, BoolLiteral true)) (emptyenv ())                     = BoolVal true             
-let _ = eval (EqualExpr (IntLiteral 3, BoolLiteral true)) (emptyenv ())  (* Exceptino Integer, Float or Bool values expected *)
+(* let _ = eval (EqualExpr (IntLiteral 3, BoolLiteral true)) (emptyenv ())  (\* Exceptino Integer, Float or Bool values expected *\) *)
 
 let _ = eval (NotEqualExpr (IntLiteral 3, IntLiteral 3)) (emptyenv ())                          = BoolVal false 
 let _ = eval (NotEqualExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                          = BoolVal true 
