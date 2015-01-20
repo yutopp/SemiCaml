@@ -14,3 +14,6 @@ semicaml
 a.out
 a.bc
 a.s
+
+*.log
+*.cache

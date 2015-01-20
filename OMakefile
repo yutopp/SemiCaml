@@ -95,6 +95,7 @@ OCAMLPACKS[] =
 	llvm
 	llvm.bitwriter
 	llvm.analysis
+	ounit
 
 if $(not $(OCAMLFIND_EXISTS))
 	eprintln(This project requires ocamlfind, but is was not found.)
@@ -156,6 +157,7 @@ FILES[] =
 	analyzer
 	codegen
 	interpreter
+	tester
 	main
 
 PROGRAM = semicaml

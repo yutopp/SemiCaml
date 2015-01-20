@@ -1,47 +1,6 @@
 open Ast
 
-(* type ast = *)
-(*     Program of ast list *)
-                   
-(*   | VerDecl of string * ast * ast option (\* done *\) *)
-(*   | FuncDecl of string * string list * ast * ast option *)
-
-(*   | Sequence of ast * ast *)
-
-(*   | ArrayNew of string * ast *)
-(*   | CondExpr of ast * ast * ast (\* done *\) *)
-
-(*   | LogicOrExpr of ast * ast    (\* done *\) *)
-(*   | LogicAndExpr of ast * ast   (\* done *\) *)
-
-(*   | EqualExpr of ast * ast      (\* done *\) *)
-(*   | NotEqualExpr of ast * ast   (\* done *\) *)
-
-(*   | LessExpr of ast * ast       (\* done *\) *)
-(*   | LessEqualExpr of ast * ast  (\* done *\) *)
-(*   | GreaterExpr of ast * ast    (\* done *\) *)
-(*   | GreaterEqualExpr of ast * ast (\* done *\) *)
-
-(*   | AddIntExpr of ast * ast     (\* done *\) *)
-(*   | SubIntExpr of ast * ast     (\* done *\) *)
-(*   | MulIntExpr of ast * ast     (\* done *\) *)
-(*   | DivIntExpr of ast * ast     (\* done *\) *)
-(*   | AddFloatExpr of ast * ast   (\* done *\) *)
-(*   | SubFloatExpr of ast * ast   (\* done *\) *)
-(*   | MulFloatExpr of ast * ast   (\* done *\) *)
-(*   | DivFloatExpr of ast * ast   (\* done *\) *)
-
-(*   | IntLiteral of int           (\* done *\) *)
-(*   | FloatLiteral of float       (\* done *\) *)
-(*   | BoolLiteral of bool         (\* done *\) *)
-
-(*   | ArrayGet of string * ast *)
-(*   | ArrayAssign of string * ast * ast *)
-(*   | FuncCall of string * ast list *)
-(*   | Id of string                (\* done *\) *)
-
 (* todo *)
-(* return type to ast *)
        
 type value =
   | IntVal of int
@@ -49,9 +8,9 @@ type value =
   | BoolVal of bool
 
 let printer values = match values with
-  | IntVal n -> Printf.printf "IntVal %d\n" n
-  | FloatVal n -> Printf.printf "FloatVal %f\n" n
-  | BoolVal b -> Printf.printf "FloatVal %b\n" b
+  | IntVal n -> Printf.sprintf "IntVal %d\n" n
+  | FloatVal n -> Printf.sprintf "FloatVal %f\n" n
+  | BoolVal b -> Printf.sprintf "FloatVal %b\n" b
 
 type constant_folder = {
   int : int -> int -> bool;
@@ -98,7 +57,7 @@ let rec eval input env =
   (* | Sequence (ehead,erest) ->  *)
   | VerDecl (id,e1,Some e2) -> eval e2 (env_ext env id (eval e1 env))
   | VerDecl (id,e1,None) -> lookup id (env_ext env id (eval e1 env))
-  (* | FuncDecl (id,args,e1) = *)
+  (* | FuncDecl (id,args,e1,Some e2) = eval e2 (env_ext env id (eval e1 env)) *)
   (* | ArrayNew (str,e1) ->  *)
                                    
   | AddIntExpr (e1,e2) -> intop ( + ) e1 e2
@@ -131,7 +90,7 @@ let rec eval input env =
   | _ -> failwith "unknown exp"                  
               
 let rec interpreter input =
-  printer (eval input (emptyenv ()))
+  eval input (emptyenv ())
           
           
 let _ = interpreter (VerDecl ("x", IntLiteral 3, None))                     
@@ -141,7 +100,7 @@ let _ = interpreter (VerDecl ("x", IntLiteral 3,
                                               (Some (VerDecl ("x", IntLiteral 8,
                                                               (Some (AddIntExpr (Id "x", Id "y")))))))))))
 
-(* let _ =  *)
+
           
 let _ = eval (AddIntExpr (IntLiteral 3, IntLiteral 2)) (emptyenv ())                            = IntVal 5                
 let _ = eval (AddIntExpr (AddIntExpr (IntLiteral 3, IntLiteral 3), IntLiteral 2)) (emptyenv ()) = IntVal 8                
@@ -209,3 +168,11 @@ let _ = eval (AddIntExpr (CondExpr (EqualExpr (IntLiteral 3, IntLiteral 2),
                                     (MulIntExpr (IntLiteral 2, IntLiteral 2)),
                                     (DivIntExpr (IntLiteral 10, IntLiteral 2))),
                           IntLiteral 3)) (emptyenv ())
+             
+(* let _ = Analyzer.analyze (Program [FuncDecl ("func", *)
+(*                                     ["a";"b";], *)
+(*                                     AddIntExpr(Id "a", *)
+(*                                                Id "b"), *)
+(*                                     Some (FuncCall ("func", *)
+(*                                                     [IntLiteral 3;IntLiteral 5])));]);; *)
+  
