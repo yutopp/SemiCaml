@@ -46,7 +46,6 @@ let parse filename =
             )
         );
 
-      (*
       (* let f = let n = 10 in let g a = a + n in g *)
       VerDecl (
           "f",
@@ -66,7 +65,6 @@ let parse filename =
             ),
           None
         )
-       *)
     ]
 
 let rec dump ?(offset=0) a =
