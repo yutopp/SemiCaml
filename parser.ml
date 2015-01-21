@@ -10,6 +10,16 @@ let parse filename =
           None
         );
 
+      (*
+      (* failed case *)
+      (* let fi a b c = a + b *)
+      FuncDecl (
+          "fi",
+          ["a"; "b"; "c"],
+          AddIntExpr (Id "a", Id "b"),
+          None
+        );
+       *)
 
       (* let a = 1 in print_int (a + 6) *)
       VerDecl (

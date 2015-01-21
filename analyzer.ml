@@ -1,5 +1,12 @@
 open Ast
 
+exception UnexpectedEnvKind
+exception UnexpectedEnv
+exception UnexpectedAttributedAST of string
+
+exception SemanticError of string
+
+
 type type_kind =
     Int
   | String
@@ -25,8 +32,6 @@ let rec to_string tk = match tk with
 let dump_type_kind tk =
   Printf.printf "%s" (to_string tk)
 
-
-exception UnexpectedEnvKind
 
 type environment =
     EModule of symbol_table
@@ -66,8 +71,6 @@ let rec lookup env name =
   | ETerm (_, _, _) -> None
 
 
-exception UnexpectedEnv
-
 let flatten_symbol_table: (string, environment) Hashtbl.t = Hashtbl.create 10
 let save_env_as_flat id env =
   begin
@@ -97,71 +100,6 @@ let update_type sym id target tk =
   Hashtbl.add sym id n;
   Printf.printf "NEW! %s: %s\n" id (to_string tk);
   save_env_as_flat id n
-
-
-type t =
-    GT
-  | LT
-  | GTE
-  | LTE
-  | EQ
-  | NEQ
-
-type operator =
-    Add of type_kind
-  | Sub of type_kind
-  | Mul of type_kind
-  | Div of type_kind
-  | OrLogic
-  | AndLogic
-  | Eq of type_kind
-  | NotEq of type_kind
-  | Gte of type_kind
-  | Gt of type_kind
-  | Lte of type_kind
-  | Lt of type_kind
-
-let make_op tag tk = match tag with
-    GT -> Gt tk
-  | LT -> Lt tk
-  | GTE -> Gte tk
-  | LTE -> Lte tk
-  | EQ -> Eq tk
-  | NEQ -> NotEq tk
-
-type a_ast =
-    Flow of a_ast list
-  | Term of ast * type_kind
-  | BinOp of a_ast * a_ast * operator * type_kind
-  | CallFunc of string * a_ast list * type_kind
-  | VarDecl of string * a_ast * type_kind * a_ast option
-  | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
-  | IdTerm of string * type_kind
-  | ANone
-
-exception UnexpectedAttributedAST of string
-
-let get_id_of a = match a with
-    Flow _ -> raise (UnexpectedAttributedAST "Flow")
-  | Term _ -> raise (UnexpectedAttributedAST "Term")
-  | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
-  | CallFunc (id, _, _) -> id
-  | VarDecl (id, _, _, _) -> id
-  | FuncDecl (id, _, _, _, _, _) -> id
-  | IdTerm (id, _) -> id
-  | ANone -> raise (UnexpectedAttributedAST "None")
-
-let rec type_kind_of a = match a with
-    Flow _ -> raise (UnexpectedAttributedAST "Flow")
-  | Term (_, tk) -> tk
-  | BinOp (_, _, _, tk) -> tk
-  | CallFunc (_, _, tk) -> tk
-  | VarDecl (_, _, tk, None) -> tk
-  | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
-  | FuncDecl (_, _, _, tk, _, None) -> tk
-  | FuncDecl (_, _, _, tk, _, Some ia) -> type_kind_of ia
-  | IdTerm (_, tk) -> tk
-  | ANone -> raise (UnexpectedAttributedAST "ANone")
 
 
 let rec dump_env ?(offset=0) env = match env with
@@ -245,8 +183,70 @@ let save_intrinsic_term_item parent_env name tk =
   name
 
 
+type t =
+    GT
+  | LT
+  | GTE
+  | LTE
+  | EQ
+  | NEQ
 
-exception SemanticError of string
+type operator =
+    Add of type_kind
+  | Sub of type_kind
+  | Mul of type_kind
+  | Div of type_kind
+  | OrLogic
+  | AndLogic
+  | Eq of type_kind
+  | NotEq of type_kind
+  | Gte of type_kind
+  | Gt of type_kind
+  | Lte of type_kind
+  | Lt of type_kind
+
+let make_op tag tk = match tag with
+    GT -> Gt tk
+  | LT -> Lt tk
+  | GTE -> Gte tk
+  | LTE -> Lte tk
+  | EQ -> Eq tk
+  | NEQ -> NotEq tk
+
+
+type a_ast =
+    Flow of a_ast list
+  | Term of ast * type_kind
+  | BinOp of a_ast * a_ast * operator * type_kind
+  | CallFunc of string * a_ast list * type_kind
+  | VarDecl of string * a_ast * type_kind * a_ast option
+  | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
+  | IdTerm of string * type_kind
+  | ANone
+
+
+let get_id_of a = match a with
+    Flow _ -> raise (UnexpectedAttributedAST "Flow")
+  | Term _ -> raise (UnexpectedAttributedAST "Term")
+  | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
+  | CallFunc (id, _, _) -> id
+  | VarDecl (id, _, _, _) -> id
+  | FuncDecl (id, _, _, _, _, _) -> id
+  | IdTerm (id, _) -> id
+  | ANone -> raise (UnexpectedAttributedAST "None")
+
+let rec type_kind_of a = match a with
+    Flow _ -> raise (UnexpectedAttributedAST "Flow")
+  | Term (_, tk) -> tk
+  | BinOp (_, _, _, tk) -> tk
+  | CallFunc (_, _, tk) -> tk
+  | VarDecl (_, _, tk, None) -> tk
+  | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
+  | FuncDecl (_, _, _, tk, _, None) -> tk
+  | FuncDecl (_, _, _, tk, _, Some ia) -> type_kind_of ia
+  | IdTerm (_, tk) -> tk
+  | ANone -> raise (UnexpectedAttributedAST "ANone")
+
 
 let rec analyze' ast env depth ottk oenc =
   let term_check ast tk ottk = match ottk with
@@ -287,6 +287,7 @@ let rec analyze' ast env depth ottk oenc =
       match in_clause with
         Some a ->
         begin
+          (* analyze 'in' clause. hide the environment, so name cannot be seen from outside *)
           let inner_env = make_tmp_env env in
           let id = save_item inner_env name tk (get_sym_table v_env) inner_depth in
           let c_a = analyze' a inner_env inner_depth None oenc in
@@ -305,14 +306,18 @@ let rec analyze' ast env depth ottk oenc =
        let decl_param_var v_name f_env =
          let tk = Undefined in
          let id = save_term_item f_env v_name tk inner_depth in
-         Printf.printf "param > %s\n" id;
          VarDecl (id, ANone, tk, None)
        in
        let complete_param aast = match aast with
            VarDecl (id, inner, tk, None) ->
            begin
-             Printf.printf "%s: %s [%s]\n" id (to_string tk) (to_string (find_tk_from_id id));
-             VarDecl (id, ANone, find_tk_from_id id, None)
+             (* check and update types to determine types of parameters. types will be inferred by analyzing the function body. *)
+             let ptk = find_tk_from_id id in
+             if ptk = Undefined then
+               begin
+                 raise (SemanticError (Printf.sprintf "type of %s cannot be determined." id))
+               end;
+             VarDecl (id, ANone, ptk, None)
            end
          | _ -> raise (SemanticError "[ice]")
        in
@@ -327,6 +332,7 @@ let rec analyze' ast env depth ottk oenc =
        match in_clause with
          Some a ->
          begin
+           (* analyze 'in' clause. hide the environment, so name cannot be seen from outside *)
            let inner_env = make_tmp_env env in
            let id = save_item inner_env name tk (get_sym_table f_env) inner_depth in
            let c_a = analyze' a inner_env inner_depth None oenc in
@@ -416,13 +422,13 @@ let rec analyze' ast env depth ottk oenc =
          begin
            let id, tk = get_id_and_tk e in
            let id_depth = depth_of e in
-           Printf.printf ">> %s depth[id: %d / current: %d]\n" id id_depth depth;
+           (* if depth of symbol that is found is shallower than depth of current expression, that symbol is placed at the out of current scope. When we are analyzing 'function', we must capture these values to make a closure *)
            if id_depth < depth then
              begin
-               Printf.printf "!! %s is enclosure\n" id;
                match oenc with
                  Some enc ->
                  begin
+                   (* enc holds env of captured values *)
                    enc := !enc @ [e]
                  end
                | _ -> ()
@@ -433,7 +439,7 @@ let rec analyze' ast env depth ottk oenc =
              begin
                if tk = Undefined then
                  begin
-                   (* update typekind... *)
+                   (* update typeinfo to determine unsolved type *)
                    update_type sym id e ttk;
                    IdTerm (id, ttk)
                  end
@@ -450,7 +456,9 @@ let rec analyze' ast env depth ottk oenc =
   | _ -> raise (SemanticError "Unsupported AST")
 
 let analyze ast =
+  (* environment for the module *)
   let env = EModule (Hashtbl.create 10) in
+  (* register intrinsic functions to the symbol table *)
   ignore (save_intrinsic_term_item env "print_int" (IntrinsicFunc [Int; Unit]));
   ignore (save_intrinsic_term_item env "print_newline" (IntrinsicFunc [Unit; Unit]));
 
@@ -458,5 +466,9 @@ let analyze ast =
       Program xs -> Flow (List.map (fun x -> analyze' x env 0 None None) xs)
     | _ -> raise (SemanticError "some exceptions are raised")
   in
+
+  (* debug *)
   dump_env env;
+
+  (* result *)
   attr_ast
