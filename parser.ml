@@ -26,6 +26,10 @@ let parse filename =
         );
 
 
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
+
+
       (* let hoge = f 10 20 in print_int hoge *)
       VerDecl (
           "hoge",
@@ -46,6 +50,11 @@ let parse filename =
             )
         );
 
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
+
+
       (* let f = let n = 10 in let g a = a + n in g *)
       VerDecl (
           "f",
@@ -64,7 +73,24 @@ let parse filename =
                 )
             ),
           None
-        )
+        );
+
+      (* print_int (f 5) *)
+      FuncCall (
+          "print_int",
+          [
+            FuncCall (
+                "f",
+                [
+                  IntLiteral 5
+                ]
+              )
+          ]
+        );
+
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
     ]
 
 let rec dump ?(offset=0) a =

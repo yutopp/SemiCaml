@@ -5,7 +5,7 @@ type type_kind =
   | String
   | Array of type_kind
   | Func of type_kind list
-  | IntrinsicFunc of string * type_kind list
+  | IntrinsicFunc of type_kind list
   | Float
   | Boolean
   | Unit
@@ -16,7 +16,7 @@ let rec to_string tk = match tk with
   | String -> "string"
   | Array inner -> "array<" ^ (to_string tk) ^ ">"
   | Func px -> "function"
-  | IntrinsicFunc (name, params) -> "intrinsic function"
+  | IntrinsicFunc params_tk -> "intrinsic function"
   | Float -> "float"
   | Boolean -> "boolean"
   | Unit -> "unit"
@@ -40,6 +40,11 @@ let depth_of env = match env with
   | ETemp (_, d, _) -> d
   | EItem (_, _, _, d, _) -> d
   | ETerm (_, _, d) -> d
+
+let id_of env = match env with
+    EItem (_, id, _, _, _) -> id
+  | ETerm (id, _, _) -> id
+  | _ -> raise UnexpectedEnvKind
 
 let rec lookup env name =
   let find sym =
@@ -130,7 +135,7 @@ type a_ast =
   | BinOp of a_ast * a_ast * operator * type_kind
   | CallFunc of string * a_ast list * type_kind
   | VarDecl of string * a_ast * type_kind * a_ast option
-  | FuncDecl of string * a_ast list * a_ast * type_kind * a_ast option
+  | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
   | IdTerm of string * type_kind
   | ANone
 
@@ -142,7 +147,7 @@ let get_id_of a = match a with
   | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
   | CallFunc (id, _, _) -> id
   | VarDecl (id, _, _, _) -> id
-  | FuncDecl (id, _, _, _, _) -> id
+  | FuncDecl (id, _, _, _, _, _) -> id
   | IdTerm (id, _) -> id
   | ANone -> raise (UnexpectedAttributedAST "None")
 
@@ -153,8 +158,8 @@ let rec type_kind_of a = match a with
   | CallFunc (_, _, tk) -> tk
   | VarDecl (_, _, tk, None) -> tk
   | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
-  | FuncDecl (_, _, _, tk, None) -> tk
-  | FuncDecl (_, _, _, tk, Some ia) -> type_kind_of ia
+  | FuncDecl (_, _, _, tk, _, None) -> tk
+  | FuncDecl (_, _, _, tk, _, Some ia) -> type_kind_of ia
   | IdTerm (_, tk) -> tk
   | ANone -> raise (UnexpectedAttributedAST "ANone")
 
@@ -243,19 +248,19 @@ let save_intrinsic_term_item parent_env name tk =
 
 exception SemanticError of string
 
-let rec analyze' ast env depth ottk =
+let rec analyze' ast env depth ottk oenc =
   let term_check ast tk ottk = match ottk with
       Some ttk -> if tk = ttk then Term (ast, tk) else raise (SemanticError "is not matched")
     | None -> Term (ast, tk)
   in
   let binary_op_check ast lhs rhs env op tk =
-    let l = analyze' lhs env depth (Some tk) in
-    let r = analyze' rhs env depth (Some tk) in
+    let l = analyze' lhs env depth (Some tk) oenc in
+    let r = analyze' rhs env depth (Some tk) oenc in
     BinOp (l, r, op, tk)
   in
   let cond_binary_op ast lhs rhs env tag =
-    let l = analyze' lhs env depth None in
-    let r = analyze' rhs env depth None in
+    let l = analyze' lhs env depth None oenc in
+    let r = analyze' rhs env depth None oenc in
     let op = match (type_kind_of l, type_kind_of r) with
         (Int, Int) -> make_op tag Int
       | (_, _) -> raise (SemanticError "invalid binary operation")
@@ -263,8 +268,8 @@ let rec analyze' ast env depth ottk =
     BinOp (l, r, op, Boolean)
   in
   let logic_binary_op ast lhs rhs env op =
-    let l = analyze' lhs env depth (Some Boolean) in
-    let r = analyze' rhs env depth (Some Boolean) in
+    let l = analyze' lhs env depth (Some Boolean) oenc in
+    let r = analyze' rhs env depth (Some Boolean) oenc in
     BinOp (l, r, op, Boolean)
   in
   let get_id_and_tk env = match env with
@@ -277,14 +282,14 @@ let rec analyze' ast env depth ottk =
     begin
       let inner_depth = depth + 1 in
       let v_env = make_tmp_env env in
-      let attr_ast = analyze' expr v_env inner_depth None in
+      let attr_ast = analyze' expr v_env inner_depth None oenc in
       let tk = type_kind_of attr_ast in
       match in_clause with
         Some a ->
         begin
           let inner_env = make_tmp_env env in
           let id = save_item inner_env name tk (get_sym_table v_env) inner_depth in
-          let c_a = analyze' a inner_env inner_depth None in
+          let c_a = analyze' a inner_env inner_depth None oenc in
           VarDecl (id, attr_ast, tk, Some c_a)
         end
       | None ->
@@ -313,34 +318,34 @@ let rec analyze' ast env depth ottk =
        in
        let f_env = make_tmp_env env in
        let incomplete_param_envs = List.map (fun p -> decl_param_var p f_env) params in
-       let attr_ast = analyze' expr f_env inner_depth None in
+       let captured_envs = ref [] in
+       let attr_ast = analyze' expr f_env inner_depth None (Some captured_envs) in
        let ret_tk = type_kind_of attr_ast in
-       Printf.printf "ret ty: %s\n" (to_string ret_tk);
        let param_nodes = List.map (fun a -> complete_param a) incomplete_param_envs in
+       let id_and_indexes = List.mapi (fun i e -> (id_of e, i)) !captured_envs in
        let tk = Func ((List.map (fun a -> type_kind_of a) param_nodes) @ [ret_tk]) in
        match in_clause with
          Some a ->
          begin
-           Printf.printf "func let in\n";
            let inner_env = make_tmp_env env in
            let id = save_item inner_env name tk (get_sym_table f_env) inner_depth in
-           let c_a = analyze' a inner_env inner_depth None in
-           FuncDecl (id, param_nodes, attr_ast, tk, Some c_a)
+           let c_a = analyze' a inner_env inner_depth None oenc in
+           FuncDecl (id, param_nodes, attr_ast, tk, id_and_indexes, Some c_a)
          end
        | None ->
           begin
             let id = save_item env name tk (get_sym_table f_env) inner_depth in
-            FuncDecl (id, param_nodes, attr_ast, tk, None)
+            FuncDecl (id, param_nodes, attr_ast, tk, id_and_indexes, None)
           end
      end
 
   | CondExpr (cond, a, b) ->
      begin
-       let cond_attr = analyze' cond env depth (Some Boolean) in
+       let cond_attr = analyze' cond env depth (Some Boolean) oenc in
        if (type_kind_of cond_attr) = Boolean then
          begin
-           let a_attr = analyze' a env depth None in
-           let b_attr = analyze' b env depth None in
+           let a_attr = analyze' a env depth None oenc in
+           let b_attr = analyze' b env depth None oenc in
            if (type_kind_of a_attr) = (type_kind_of b_attr) then
              Term (ast, type_kind_of a_attr)
            else raise (SemanticError "types of rhs or lhs is different")
@@ -371,6 +376,7 @@ let rec analyze' ast env depth ottk =
   | IntLiteral _ -> term_check ast Int ottk
   | FloatLiteral _ -> term_check ast Float ottk
   | BoolLiteral _ -> term_check ast Boolean ottk
+  | UnitLiteral -> term_check ast Unit ottk
 
   | FuncCall (name, args) ->
      begin
@@ -380,7 +386,7 @@ let rec analyze' ast env depth ottk =
          if List.length args <> (params_len - 1) then raise (SemanticError "langth of args and params is different");
          (* check semantics of args *)
          let eval_arg i a =
-           analyze' a env depth (Some (List.nth params i))
+           analyze' a env depth (Some (List.nth params i)) oenc
          in
          let a_args = List.mapi eval_arg args in
          CallFunc (id, a_args, (List.nth params (params_len - 1)))
@@ -391,7 +397,7 @@ let rec analyze' ast env depth ottk =
          begin
            let apply id tk = match tk with
                Func params -> call_function e id params
-             | IntrinsicFunc (_, params) -> call_function e id params
+             | IntrinsicFunc params -> call_function e id params
              | _ -> raise (SemanticError "function is not callable")
            in
            match e with
@@ -411,6 +417,16 @@ let rec analyze' ast env depth ottk =
            let id, tk = get_id_and_tk e in
            let id_depth = depth_of e in
            Printf.printf ">> %s depth[id: %d / current: %d]\n" id id_depth depth;
+           if id_depth < depth then
+             begin
+               Printf.printf "!! %s is enclosure\n" id;
+               match oenc with
+                 Some enc ->
+                 begin
+                   enc := !enc @ [e]
+                 end
+               | _ -> ()
+             end;
 
            match ottk with
              Some ttk ->
@@ -435,10 +451,11 @@ let rec analyze' ast env depth ottk =
 
 let analyze ast =
   let env = EModule (Hashtbl.create 10) in
-  ignore (save_intrinsic_term_item env "print_int" (IntrinsicFunc ("print", [Int; Unit])));
+  ignore (save_intrinsic_term_item env "print_int" (IntrinsicFunc [Int; Unit]));
+  ignore (save_intrinsic_term_item env "print_newline" (IntrinsicFunc [Unit; Unit]));
 
   let attr_ast = match ast with
-      Program xs -> Flow (List.map (fun x -> analyze' x env 0 None) xs)
+      Program xs -> Flow (List.map (fun x -> analyze' x env 0 None None) xs)
     | _ -> raise (SemanticError "some exceptions are raised")
   in
   dump_env env;
