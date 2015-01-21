@@ -14,6 +14,12 @@ opam install omake llvm
 omake
 ```
 
+# How to test
+after build
+```
+omake check
+```
+
 # Usage
 ```
 ./semicaml

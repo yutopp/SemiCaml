@@ -4,13 +4,13 @@ open Ast
        
 type value =
   | IntVal of int
-  | FloatVal of float
+  | FloatVal of float                  
   | BoolVal of bool
 
 let printer values = match values with
-  | IntVal n -> Printf.sprintf "IntVal %d\n" n
-  | FloatVal n -> Printf.sprintf "FloatVal %f\n" n
-  | BoolVal b -> Printf.sprintf "FloatVal %b\n" b
+  | IntVal n -> Printf.sprintf "%d\n" n
+  | FloatVal n -> Printf.sprintf "%f\n" n
+  | BoolVal b -> Printf.sprintf "%b\n" b
 
 type constant_folder = {
   int : int -> int -> bool;
@@ -54,7 +54,6 @@ let rec eval input env =
   | FloatLiteral n -> FloatVal n
   | BoolLiteral b -> BoolVal b
   | Id id -> lookup id env
-  (* | Sequence (ehead,erest) ->  *)
   | VerDecl (id,e1,Some e2) -> eval e2 (env_ext env id (eval e1 env))
   | VerDecl (id,e1,None) -> lookup id (env_ext env id (eval e1 env))
   (* | FuncDecl (id,args,e1,Some e2) = eval e2 (env_ext env id (eval e1 env)) *)
@@ -90,11 +89,9 @@ let rec eval input env =
   | _ -> failwith "unknown exp"                  
               
 let rec interpreter input =
-  eval input (emptyenv ())
+  eval input (emptyenv ())          
           
-          
-let _ = interpreter (VerDecl ("x", IntLiteral 3, None))                     
-let _ = interpreter (VerDecl ("x", IntLiteral 3, (Some (AddIntExpr(Id "x", IntLiteral 3)))))
+
 let _ = interpreter (VerDecl ("x", IntLiteral 3,
                               (Some (VerDecl ("y", IntLiteral 5,
                                               (Some (VerDecl ("x", IntLiteral 8,
