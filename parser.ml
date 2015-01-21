@@ -144,7 +144,7 @@ let parse filename =
                               ["c"],
                               AddIntExpr (AddIntExpr( Id "a", Id "b"), Id "c"),
                               Some (
-                                  FuncCall ("print_int", [FuncCall ("g", [IntLiteral 10])] )
+                                  FuncCall ("print_int", [FuncCall ("g", [IntLiteral 10])])
                                 )
                             )
                         )
@@ -163,17 +163,47 @@ let parse filename =
       VerDecl (
           "g",
           Sequence (
-              FuncCall ("print_int", [IntLiteral 1] ),
+              FuncCall ("print_int", [IntLiteral 1]),
               Sequence (
-                  FuncCall ("print_newline", [UnitLiteral] ),
+                  FuncCall ("print_newline", [UnitLiteral]),
                   Sequence (
-                      FuncCall ("print_int", [IntLiteral 2] ),
-                      FuncCall ("print_newline", [UnitLiteral] )
+                      FuncCall ("print_int", [IntLiteral 2]),
+                      FuncCall ("print_newline", [UnitLiteral])
                     )
                 )
             ),
           None
         );
+
+      (* print_int (if 1 = 1 then 1 else 2) *)
+      FuncCall (
+          "print_int",
+          [
+            CondExpr (
+                EqualExpr (IntLiteral 1, IntLiteral 1),
+                IntLiteral 1,
+                IntLiteral 2
+              )
+          ]
+        );
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
+
+      (* print_int (if 1 = 10 then 1 else 2) *)
+      FuncCall (
+          "print_int",
+          [
+            CondExpr (
+                EqualExpr (IntLiteral 1, IntLiteral 10),
+                IntLiteral 1,
+                IntLiteral 2
+              )
+          ]
+        );
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
     ]
 
 let rec dump ?(offset=0) a =

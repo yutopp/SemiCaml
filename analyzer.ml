@@ -218,6 +218,7 @@ type a_ast =
     Flow of a_ast list
   | Term of ast * type_kind
   | BinOp of a_ast * a_ast * operator * type_kind
+  | Cond of a_ast * a_ast * a_ast
   | CallFunc of string * a_ast list * type_kind
   | VarDecl of string * a_ast * type_kind * a_ast option
   | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
@@ -230,6 +231,7 @@ let get_id_of a = match a with
     Flow _ -> raise (UnexpectedAttributedAST "Flow")
   | Term _ -> raise (UnexpectedAttributedAST "Term")
   | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
+  | Cond _ -> raise (UnexpectedAttributedAST "Cond")
   | CallFunc (id, _, _) -> id
   | VarDecl (id, _, _, _) -> id
   | FuncDecl (id, _, _, _, _, _) -> id
@@ -241,6 +243,7 @@ let rec type_kind_of a = match a with
     Flow _ -> raise (UnexpectedAttributedAST "Flow")
   | Term (_, tk) -> tk
   | BinOp (_, _, _, tk) -> tk
+  | Cond (cond, a, b) -> type_kind_of a
   | CallFunc (_, _, tk) -> tk
   | VarDecl (_, _, tk, None) -> tk
   | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
@@ -363,9 +366,9 @@ let rec analyze' ast env depth ottk oenc =
          begin
            let a_attr = analyze' a env depth None oenc in
            let b_attr = analyze' b env depth None oenc in
-           if (type_kind_of a_attr) = (type_kind_of b_attr) then
-             Term (ast, type_kind_of a_attr)
-           else raise (SemanticError "types of rhs or lhs is different")
+           match (type_kind_of a_attr) = (type_kind_of b_attr) with
+             true -> Cond (cond_attr, a_attr, b_attr)
+           | _ -> raise (SemanticError "types of rhs or lhs is different")
          end
        else raise (SemanticError "condition must be 'boolean'")
      end
