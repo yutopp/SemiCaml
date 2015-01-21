@@ -21,7 +21,7 @@ type type_kind =
 let rec to_string tk = match tk with
     Int -> "int"
   | String -> "string"
-  | Array inner -> "array<" ^ (to_string tk) ^ ">"
+  | Array inner_tk -> "array<" ^ (to_string inner_tk) ^ ">"
   | Func px -> "function"
   | IntrinsicFunc params_tk -> "intrinsic function"
   | Float -> "float"
@@ -220,6 +220,9 @@ type a_ast =
   | BinOp of a_ast * a_ast * operator * type_kind
   | Cond of a_ast * a_ast * a_ast
   | CallFunc of string * a_ast list * type_kind
+  | ArrayCreate of a_ast * type_kind
+  | ArrayRef of string * a_ast * type_kind
+  | ArrayAssign of string * a_ast * a_ast * type_kind
   | VarDecl of string * a_ast * type_kind * a_ast option
   | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
   | Seq of a_ast * a_ast
@@ -233,6 +236,9 @@ let get_id_of a = match a with
   | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
   | Cond _ -> raise (UnexpectedAttributedAST "Cond")
   | CallFunc (id, _, _) -> id
+  | ArrayCreate _ -> raise (UnexpectedAttributedAST "ArrayCreate")
+  | ArrayRef _ -> raise (UnexpectedAttributedAST "ArrayRef")
+  | ArrayAssign _ -> raise (UnexpectedAttributedAST "ArrayAssign")
   | VarDecl (id, _, _, _) -> id
   | FuncDecl (id, _, _, _, _, _) -> id
   | Seq _ -> raise (UnexpectedAttributedAST "Seq")
@@ -245,6 +251,9 @@ let rec type_kind_of a = match a with
   | BinOp (_, _, _, tk) -> tk
   | Cond (cond, a, b) -> type_kind_of a
   | CallFunc (_, _, tk) -> tk
+  | ArrayCreate (_, tk) -> tk
+  | ArrayRef (_, _, tk) -> tk
+  | ArrayAssign (_, _, _, tk) -> tk
   | VarDecl (_, _, tk, None) -> tk
   | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
   | FuncDecl (_, _, _, tk, _, None) -> tk
@@ -257,7 +266,7 @@ let rec type_kind_of a = match a with
 let rec analyze' ast env depth ottk oenc =
   let term_check ast tk ottk = match ottk with
       (* if expected type is specified and actual type is different from expected type, it is error *)
-      Some ttk -> if tk = ttk then Term (ast, tk) else raise (SemanticError "is not matched")
+      Some ttk -> if tk = ttk then Term (ast, tk) else raise (SemanticError "type is not matched")
     | None -> Term (ast, tk)
   in
   let binary_op_check ast lhs rhs env op tk =
@@ -270,6 +279,7 @@ let rec analyze' ast env depth ottk oenc =
     let r = analyze' rhs env depth None oenc in
     let op = match (type_kind_of l, type_kind_of r) with
         (Int, Int) -> make_op tag Int
+      | (Float, Float) -> make_op tag Float
       | (_, _) -> raise (SemanticError "invalid binary operation")
     in
     BinOp (l, r, op, Boolean)
@@ -284,6 +294,29 @@ let rec analyze' ast env depth ottk oenc =
     | ETerm (id, tk, depth) -> (id, tk)
     | _ -> raise (SemanticError "[ice] invalid env kind")
   in
+  let reference_array name index =
+    let oe = lookup env name in
+    match oe with
+      Some (e, _) ->
+      begin
+        let array_get id tk = match tk with
+            Array inner_tk ->
+            begin
+              let a_index = analyze' index env depth (Some Int) oenc in
+              match (type_kind_of a_index) = Int with
+                true -> ArrayRef (id, a_index, inner_tk)
+              | _ -> raise (SemanticError "type of array index is mismatched")
+            end
+          | _ -> raise (SemanticError "id is not array")
+        in
+        match e with
+          EItem (_, id, tk, depth, _) -> array_get id tk
+        | ETerm (id, tk, depth) -> array_get id tk
+        | _ -> raise (SemanticError "[ice] invalid env kind")
+      end
+    | None -> raise (SemanticError "array id was not found")
+  in
+
   match ast with
     VerDecl (name, expr, in_clause) ->
     begin
@@ -320,11 +353,9 @@ let rec analyze' ast env depth ottk oenc =
            begin
              (* check and update types to determine types of parameters. types will be inferred by analyzing the function body. *)
              let ptk = find_tk_from_id id in
-             if ptk = Undefined then
-               begin
-                 raise (SemanticError (Printf.sprintf "type of %s cannot be determined." id))
-               end;
-             VarDecl (id, ANone, ptk, None)
+             match ptk with
+               Undefined -> raise (SemanticError (Printf.sprintf "type of %s cannot be determined." id))
+             | _ -> VarDecl (id, ANone, ptk, None)
            end
          | _ -> raise (SemanticError "[ice]")
        in
@@ -357,6 +388,19 @@ let rec analyze' ast env depth ottk oenc =
        let l_attr = analyze' lhs env depth None oenc in
        let r_attr = analyze' rhs env depth None oenc in
        Seq (l_attr, r_attr)
+     end
+
+  | ArrayNew (typename, element_num) ->
+     begin
+       let inner_tk = match typename with
+           "int" -> Int
+         | "float" -> Float
+         | "bool" -> Boolean
+         | _ -> raise (SemanticError (Printf.sprintf "type of %s cannot be used for Array." typename))
+       in
+       let n = analyze' element_num env depth (Some Int) oenc in
+       let tk = Array inner_tk in
+       ArrayCreate (n, tk)
      end
 
   | CondExpr (cond, a, b) ->
@@ -398,6 +442,22 @@ let rec analyze' ast env depth ottk oenc =
   | BoolLiteral _ -> term_check ast Boolean ottk
   | UnitLiteral -> term_check ast Unit ottk
 
+  | ArrayGet (name, index) -> reference_array name index
+
+  | ArrayAssign (name, index, expr) ->
+     begin
+       let elem = reference_array name index in
+       match elem with
+         ArrayRef (id, a_index, inner_tk) ->
+         begin
+           let a_value = analyze' expr env depth (Some inner_tk) oenc in
+           match (type_kind_of a_value) = inner_tk with
+             true -> ArrayAssign (id, a_index, a_value, Unit)
+           | _ -> raise (SemanticError "type of rhs of array is mismatched")
+         end
+       | _ -> raise (SemanticError "ice")
+     end
+
   | FuncCall (name, args) ->
      begin
        let call_function e id params =
@@ -406,10 +466,15 @@ let rec analyze' ast env depth ottk oenc =
          if List.length args <> (params_len - 1) then raise (SemanticError "langth of args and params is different");
          (* check semantics of args *)
          let eval_arg i a =
-           analyze' a env depth (Some (List.nth params i)) oenc
+           let param_tk = (List.nth params i) in
+           let ea = analyze' a env depth (Some param_tk) oenc in
+           match (type_kind_of ea) = param_tk with
+             true -> ea
+           | _ -> raise (SemanticError (Printf.sprintf "type of index %d is mismatched" i))
          in
          let a_args = List.mapi eval_arg args in
-         CallFunc (id, a_args, (List.nth params (params_len - 1)))
+         let return_ty = List.nth params (params_len - 1) in
+         CallFunc (id, a_args, return_ty)
        in
        let oe = lookup env name in
        match oe with

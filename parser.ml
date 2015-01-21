@@ -204,6 +204,28 @@ let parse filename =
 
       (* print_newline () *)
       FuncCall ("print_newline", [UnitLiteral]);
+
+      (* let arr = Array.new float 10 *)
+      VerDecl (
+          "arr",
+          ArrayNew ("float", IntLiteral 10),
+          None
+        );
+
+      (* print_float (arr.(2)) *)
+      FuncCall ("print_float", [ArrayGet ("arr", IntLiteral 2)]);
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
+
+      (* arr.(2) <- 3.14 *)
+      ArrayAssign ("arr", IntLiteral 2, FloatLiteral 3.14);
+
+      (* print_float (arr.(2)) *)
+      FuncCall ("print_float", [ArrayGet ("arr", IntLiteral 2)]);
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
     ]
 
 let rec dump ?(offset=0) a =

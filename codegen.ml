@@ -6,6 +6,7 @@ let context = L.global_context ()
 let s_module = L.create_module context "SemiCaml"
 let builder = L.builder context
 
+let i8_ty = L.i8_type context
 let i32_ty = L.i32_type context
 let float_ty = L.float_type context
 let bool_ty = L.i1_type context
@@ -14,8 +15,9 @@ let void_ty = L.void_type context
 let m_i32_ty = L.pointer_type i32_ty
 let m_float_ty = L.pointer_type float_ty
 let m_bool_ty = L.pointer_type bool_ty
-let m_unit_ty = L.pointer_type (L.i8_type context)
+let m_unit_ty = L.pointer_type i8_ty
 
+let unit_value = L.const_bitcast (L.const_int i32_ty 0) m_unit_ty
 
 let closure_ty = L.struct_type context (Array.make 2 (L.pointer_type void_ty))
 
@@ -66,8 +68,23 @@ let f_new_bool =
   let func_ty = L.function_type m_bool_ty params in
   L.declare_function "_semi_caml_new_bool" func_ty s_module
 
+let f_new_array =
+  let params = [|i32_ty; L.pointer_type i8_ty|] in
+  let func_ty = L.function_type ptr_to_vals_ty params in
+  L.declare_function "_semi_caml_new_array" func_ty s_module
+
+let f_ref_array_elem =
+  let params = [|ptr_to_vals_ty; i32_ty|] in
+  let func_ty = L.function_type (L.pointer_type i8_ty) params in
+  L.declare_function "_semi_caml_ref_array_element" func_ty s_module
+
+let f_assign_array_elem =
+  let params = [|ptr_to_vals_ty; i32_ty; L.pointer_type i8_ty|] in
+  let func_ty = L.function_type void_ty params in
+  L.declare_function "_semi_caml_assign_array_element" func_ty s_module
+
 let f_new_value_holder_list =
-  let params = Array.make 1 i32_ty in
+  let params = [|i32_ty|] in
   let func_ty = L.function_type ptr_to_vals_ty params in
   L.declare_function "_semi_caml_new_value_holder_list" func_ty s_module
 
@@ -87,7 +104,7 @@ exception UnexpectedAAst
 let rec to_llvm_ty tk = match tk with
     A.Int -> i32_ty
   | A.String -> (*; void_ty *)raise (UnexpectedType "string")
-  | A.Array itk -> (*; void_ty *) raise (UnexpectedType "array")
+  | A.Array itk -> ptr_to_vals_ty
   | A.Func px ->
      begin
        let rev = List.rev px in
@@ -98,8 +115,8 @@ let rec to_llvm_ty tk = match tk with
        L.function_type ret_ty (Array.of_list params_ty)
      end
   | A.IntrinsicFunc params -> (*; void_ty *) raise (UnexpectedType "instfunc")
-  | A.Float -> (*; void_ty *) raise (UnexpectedType "float")
-  | A.Boolean -> (*; void_ty *) raise (UnexpectedType "boolean")
+  | A.Float -> float_ty
+  | A.Boolean -> bool_ty
   | A.Unit -> void_ty
   | A.Undefined -> raise (UnexpectedType "undefined")
 
@@ -208,7 +225,7 @@ let rec make_llvm_ir aast ip___ = match aast with
           Ast.IntLiteral v -> make_managed_value A.Int (L.const_int i32_ty v)
         | Ast.FloatLiteral v -> make_managed_value A.Float (L.const_float float_ty v)
         | Ast.BoolLiteral v -> make_managed_value A.Boolean (L.const_int bool_ty (if v then 1 else 0))
-        | Ast.UnitLiteral -> L.const_bitcast (L.const_int i32_ty 0) m_unit_ty
+        | Ast.UnitLiteral -> unit_value
         | _ -> raise NotSupportedNode
       in
       Address v
@@ -376,6 +393,45 @@ let rec make_llvm_ir aast ip___ = match aast with
           end
 
        | _ -> raise InvalidValue
+     end
+
+  | A.ArrayCreate (elem_num, A.Array inner_tk) ->
+     begin
+       let len_p = to_ptr_val (make_llvm_ir elem_num ip___) in
+       let len = L.build_load len_p "" builder in
+       let initial_value = match inner_tk with
+           A.Int -> make_managed_value A.Int (L.const_int i32_ty 0)
+         | A.Float -> make_managed_value A.Float (L.const_float float_ty 0.0)
+         | A.Boolean -> make_managed_value A.Boolean (L.const_int bool_ty 0)
+         | _ -> raise NotSupportedNode
+       in
+       let generic_iv = L.build_bitcast initial_value (L.pointer_type i8_ty) "" builder in
+       (* elem 0 of array contains length of it *)
+       let array_p = L.build_call f_new_array [|len; generic_iv|] "" builder in
+       Address (array_p)
+     end
+
+  | A.ArrayRef (id, elem_index, tk) ->
+     begin
+       let arr = to_ptr_val (Hashtbl.find val_table id) in
+       let index_p = to_ptr_val (make_llvm_ir elem_index ip___) in
+       let index = L.build_load index_p "" builder in
+       let generic_v = L.build_call f_ref_array_elem [|arr; index|] "" builder in
+       let v = L.build_bitcast generic_v (L.pointer_type (to_llvm_ty tk)) "" builder in
+       Address (v)
+     end
+
+  | A.ArrayAssign (id, elem_index, expr, tk) ->
+     begin
+       let arr = to_ptr_val (Hashtbl.find val_table id) in
+       let index_p = to_ptr_val (make_llvm_ir elem_index ip___) in
+       let index = L.build_load index_p "" builder in
+       let next_ip = L.instr_succ index in
+       let value = to_ptr_val (make_llvm_ir expr next_ip) in
+       let generic_v = L.build_bitcast value (L.pointer_type i8_ty) "" builder in
+       ignore (L.build_call f_assign_array_elem [|arr; index; generic_v|] "" builder);
+
+       Address unit_value
      end
 
   | A.IdTerm (id, tk) ->

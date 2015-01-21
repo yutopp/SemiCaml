@@ -47,6 +47,8 @@ extern "C"
 
 
     // TODO: memory management
+    using holder_t = void*;
+
     auto _semi_caml_new_int32( std::int32_t const v )
         -> std::int32_t*
     {
@@ -65,7 +67,40 @@ extern "C"
         return new bool( v );
     }
 
-    using holder_t = void*;
+    auto _semi_caml_new_array( std::int32_t const length, void* const init_value )
+        -> holder_t*
+    {
+        auto const a_length = length + 1;
+        auto array = new holder_t[a_length];
+        array[0] = _semi_caml_new_int32( a_length );
+        for (auto i=1; i<a_length; ++i) {
+            array[i] = init_value;
+        }
+
+        return array;
+    }
+
+    auto _semi_caml_ref_array_element( holder_t* arr, std::int32_t const index )
+        -> holder_t
+    {
+        std::int32_t const length = *static_cast<int*>( arr[0] );
+        if ( index < 0 || index >= length ) {
+            std::cout << "Out of range: " << index << std::endl;
+        }
+
+        return arr[index+1];
+    }
+
+    auto _semi_caml_assign_array_element( holder_t* arr, std::int32_t const index, void* v )
+        -> void
+    {
+        std::int32_t const length = *static_cast<int*>( arr[0] );
+        if ( index < 0 || index >= length ) {
+            std::cout << "Out of range: " << index << std::endl;
+        }
+
+        arr[index+1] = v;
+    }
 
     struct closure_bag_t
     {
