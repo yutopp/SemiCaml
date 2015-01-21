@@ -13,9 +13,84 @@ int main()
 
 extern "C"
 {
-    auto _semi_caml_print_int( std::int32_t const v )
-        -> void
+    auto _semi_caml_print_int( std::int32_t const* const v )
+        -> void*
     {
-        std::cout << v;
+        std::cout << *v;
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_bool( bool const* const v )
+        -> void*
+    {
+        std::cout << (*v ? "true" : "false");
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_float( float const* const v )
+        -> void*
+    {
+        std::cout << *v;
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_newline( void* )
+        -> void*
+    {
+        std::cout << std::endl;
+
+        return nullptr;
+    }
+
+
+    // TODO: memory management
+    auto _semi_caml_new_int32( std::int32_t const v )
+        -> std::int32_t*
+    {
+        return new std::int32_t( v );
+    }
+
+    auto _semi_caml_new_float( float const v )
+        -> float*
+    {
+        return new float( v );
+    }
+
+    auto _semi_caml_new_bool( bool const v )
+        -> bool*
+    {
+        return new bool( v );
+    }
+
+    using holder_t = void*;
+
+    struct closure_bag_t
+    {
+        void* fp;
+        holder_t* captured;
+        holder_t* args;
+    };
+
+    auto _semi_caml_new_value_holder_list( std::int32_t const length )
+        -> holder_t*
+    {
+        return new holder_t[length];
+    }
+
+    auto _semi_caml_new_closure_bag( void* const fp, std::int32_t const c_length )
+        -> closure_bag_t*
+    {
+        auto captured_holder = _semi_caml_new_value_holder_list( c_length );
+
+        auto b = closure_bag_t{
+            fp,
+            captured_holder,
+            nullptr
+        };
+
+        return new closure_bag_t( b );
     }
 }
