@@ -271,10 +271,10 @@ let rec make_llvm_ir aast ip___ = match aast with
        let cl_bag = L.build_call f_new_closure_bag [|v_fp; len|] "" builder in
 
        (* capture *)
-       let captured_ptrs = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0; L.const_int i32_ty 1|] "" builder in
+       let p_captured_ptrs = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0; L.const_int i32_ty 1|] "" builder in
+       let captured_ptrs = L.build_load p_captured_ptrs "" builder in
        let set_captured_value (id, index) =
-         let addr = L.const_in_bounds_gep captured_ptrs [|L.const_int i32_ty index|] in
-         let to_ptr = L.build_load addr "" builder in
+         let to_ptr = L.build_in_bounds_gep captured_ptrs [|L.const_int i32_ty index|] "" builder in
          let c_raw_val = Hashtbl.find val_table id in
          let c_val = to_ptr_val c_raw_val in
          ignore (L.build_store c_val to_ptr builder)

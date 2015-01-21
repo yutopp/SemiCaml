@@ -128,6 +128,38 @@ let parse filename =
       (* print_newline () *)
       FuncCall ("print_newline", [UnitLiteral] );
 
+
+      (* let g = let a = 10 in let b = 20 in let g c = a + b + c in print_int (g 10) *)
+      VerDecl (
+          "g",
+          VerDecl (
+              "a",
+              IntLiteral 10,
+              Some (
+                  VerDecl (
+                      "b",
+                      IntLiteral 20,
+
+                      Some (
+                          FuncDecl (
+                              "g",
+                              ["c"],
+                              AddIntExpr (AddIntExpr( Id "a", Id "b"), Id "c"),
+                              Some (
+                                  FuncCall ("print_int", [FuncCall ("g", [IntLiteral 10])] )
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+          None
+        );
+
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
+
     ]
 
 let rec dump ?(offset=0) a =
