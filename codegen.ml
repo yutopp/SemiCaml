@@ -288,6 +288,13 @@ let rec make_llvm_ir aast ip___ = match aast with
        | None -> v
      end
 
+  | A.Seq (lhs, rhs) ->
+     begin
+       let l = to_ptr_val (make_llvm_ir lhs ip___) in
+       let l_ip = L.instr_succ l in
+       make_llvm_ir rhs l_ip
+     end
+
   | A.BinOp (lhs, rhs, op, tk) ->
      begin
        let l = to_ptr_val (make_llvm_ir lhs ip___) in
@@ -343,6 +350,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        Printf.printf "IdTerm\n";
        Hashtbl.find val_table id
      end
+
   | _ -> raise NotSupportedNode
 
 let rec make_llvm_ir_seq aast ip = match aast with

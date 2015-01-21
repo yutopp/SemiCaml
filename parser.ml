@@ -158,8 +158,24 @@ let parse filename =
 
 
       (* print_newline () *)
-      FuncCall ("print_newline", [UnitLiteral] );
+      FuncCall ("print_newline", [UnitLiteral]);
 
+
+      (* let g = print_int 1; print_newline (); print_int 2; print_newline () *)
+      VerDecl (
+          "g",
+          Sequence (
+              FuncCall ("print_int", [IntLiteral 1] ),
+              Sequence (
+                  FuncCall ("print_newline", [UnitLiteral] ),
+                  Sequence (
+                      FuncCall ("print_int", [IntLiteral 2] ),
+                      FuncCall ("print_newline", [UnitLiteral] )
+                    )
+                )
+            ),
+          None
+        );
     ]
 
 let rec dump ?(offset=0) a =

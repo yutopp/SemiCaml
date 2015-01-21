@@ -221,6 +221,7 @@ type a_ast =
   | CallFunc of string * a_ast list * type_kind
   | VarDecl of string * a_ast * type_kind * a_ast option
   | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
+  | Seq of a_ast * a_ast
   | IdTerm of string * type_kind
   | ANone
 
@@ -232,6 +233,7 @@ let get_id_of a = match a with
   | CallFunc (id, _, _) -> id
   | VarDecl (id, _, _, _) -> id
   | FuncDecl (id, _, _, _, _, _) -> id
+  | Seq _ -> raise (UnexpectedAttributedAST "Seq")
   | IdTerm (id, _) -> id
   | ANone -> raise (UnexpectedAttributedAST "None")
 
@@ -244,6 +246,7 @@ let rec type_kind_of a = match a with
   | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
   | FuncDecl (_, _, _, tk, _, None) -> tk
   | FuncDecl (_, _, _, tk, _, Some ia) -> type_kind_of ia
+  | Seq (lhs, rhs) -> type_kind_of rhs
   | IdTerm (_, tk) -> tk
   | ANone -> raise (UnexpectedAttributedAST "ANone")
 
@@ -344,6 +347,13 @@ let rec analyze' ast env depth ottk oenc =
             let id = save_item env name tk (get_sym_table f_env) inner_depth in
             FuncDecl (id, param_nodes, attr_ast, tk, id_and_indexes, None)
           end
+     end
+
+  | Sequence (lhs, rhs) ->
+     begin
+       let l_attr = analyze' lhs env depth None oenc in
+       let r_attr = analyze' rhs env depth None oenc in
+       Seq (l_attr, r_attr)
      end
 
   | CondExpr (cond, a, b) ->
