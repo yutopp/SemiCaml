@@ -19,13 +19,12 @@
 # You will usually need to modify this file for your project.
 
 # Delete this line once you have configured this file
-# eprintln($(CWD)/OMakefile is not configured)
 
 ########################################################################
 # Phony targets are scoped, so you probably want to declare them first.
 #
 
-.PHONY: clean
+.PHONY: clean check
 
 ########################################################################
 # Subdirectories.
@@ -49,6 +48,7 @@
 # ASFLAGS +=
 # LDFLAGS +=
 # INCLUDES +=
+# CXXFLAGS += -std=c++11
 
 ################################################
 # Uncomment the following section if you want
@@ -69,12 +69,11 @@
 #
 
 # LIBFILES[] =
-#    file1
-#    file2
-#
-# LIB = libxxx
-#
-# .DEFAULT: $(StaticCLibrary $(LIB), $(LIBFILES))
+
+
+# LIB =
+
+# .DEFAULT: $(StaticCXXLibrary $(LIB), $(LIBFILES))
 
 ########################################################################
 # OCaml configuration.
@@ -90,19 +89,21 @@
 # This project requires ocamlfind (default - false).
 #
 USE_OCAMLFIND = true
-#
+
 OCAMLPACKS[] =
-	oUnit
+	llvm
+	llvm.bitwriter
+	llvm.analysis
 
 if $(not $(OCAMLFIND_EXISTS))
-   eprintln(This project requires ocamlfind, but is was not found.)
-   eprintln(You need to install ocamlfind and run "omake --configure".)
-   exit 1
+	eprintln(This project requires ocamlfind, but is was not found.)
+	eprintln(You need to install ocamlfind and run "omake --configure".)
+	exit 1
 
 #
 # Include path
 #
-OCAMLINCLUDES += ../src
+# OCAMLINCLUDES +=
 
 #
 # Compile native or byte code?
@@ -134,29 +135,33 @@ OCAMLINCLUDES += ../src
 # Build an OCaml library
 #
 
-# FILES[] =
-#    file1
-#    file2
+FILES[] =
+	token
+	ast
+	lexer
+	parser
+	analyzer
+	codegen
+	interpreter
+	main
+
+LIB = semicaml
+
 #
-# LIB = main
-#
-# .DEFAULT: $(OCamlLibrary $(LIB), $(FILES))
+OCamlLibrary($(LIB), $(FILES))
 
 ################################################
 # Build an OCaml program
 #
 
-FILES[] =
-	tester
-#
-PROGRAM = test
-OCAML_LIBS += ../src/semicaml
+PROGRAM = semicaml
+# OCAML_LIBS +=
 # OCAML_CLIBS +=
 # OCAML_OTHER_LIBS +=
 # OCAML_LIB_FLAGS +=
-#
 
 clean:
-	rm -f *~ *.opt *.cmi *.cmx *.o *.omc *.log *.cache $(PROGRAM)
+	rm -f *~ *.opt *.cmi *.cmx *.cmxa *.o *.omc *.a *.out *.s *.bc *.log *.cache $(PROGRAM)
+
 
 .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

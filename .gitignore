@@ -2,22 +2,19 @@
 *.cmx
 *.cmo
 *.cmxa
+
 *.o
 *.a
+*.out
+*.bc
+*.s
 
 .omakedb
 .omakedb.lock
 *.omc
 
-*.opt
+semicaml.opt
 semicaml
-test/test
-
-a.out
-a.bc
-a.s
 
 *.log
 *.cache
-
-

@@ -12,6 +12,7 @@
 opam update
 opam install omake llvm ounit
 omake
+omake local
 ```
 
 # How to test

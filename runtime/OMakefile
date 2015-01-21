@@ -19,13 +19,12 @@
 # You will usually need to modify this file for your project.
 
 # Delete this line once you have configured this file
-# eprintln($(CWD)/OMakefile is not configured)
 
 ########################################################################
 # Phony targets are scoped, so you probably want to declare them first.
 #
 
-.PHONY: clean
+.PHONY: clean check
 
 ########################################################################
 # Subdirectories.
@@ -49,6 +48,7 @@
 # ASFLAGS +=
 # LDFLAGS +=
 # INCLUDES +=
+CXXFLAGS += -std=c++11
 
 ################################################
 # Uncomment the following section if you want
@@ -68,95 +68,13 @@
 # in the current directory.
 #
 
-# LIBFILES[] =
-#    file1
-#    file2
-#
-# LIB = libxxx
-#
-# .DEFAULT: $(StaticCLibrary $(LIB), $(LIBFILES))
+LIBFILES[] =
+	runtime
 
-########################################################################
-# OCaml configuration.
-# Delete this section if you are not building OCaml files.
-#
+LIB = libsemiruntime
 
-################################################
-# Configuration.  You may want to modify any of these configuration
-# variables.
-#
+.DEFAULT: $(StaticCXXLibrary $(LIB), $(LIBFILES))
 
-#
-# This project requires ocamlfind (default - false).
-#
-USE_OCAMLFIND = true
-#
-OCAMLPACKS[] =
-	oUnit
-
-if $(not $(OCAMLFIND_EXISTS))
-   eprintln(This project requires ocamlfind, but is was not found.)
-   eprintln(You need to install ocamlfind and run "omake --configure".)
-   exit 1
-
-#
-# Include path
-#
-OCAMLINCLUDES += ../src
-
-#
-# Compile native or byte code?
-#
-# The default values are defined as follows:
-#
-# NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
-# BYTE_ENABLED = $(not $(OCAMLOPT_EXISTS))
-
-#
-# Various options
-#
-# OCAMLFLAGS    +=
-# OCAMLCFLAGS   +=
-# OCAMLOPTFLAGS +=
-# OCAML_LINK_FLAGS +=
-# OCAML_BYTE_LINK_FLAGS +=
-# OCAML_NATIVE_LINK_FLAGS +=
-
-################################################
-# Generated files
-#
-# Workaround for the fact that ocamldep does not pay attention to .mll
-# and .mly files.
-#
-# OCamlGeneratedFiles(parser.ml lexer.ml)
-
-################################################
-# Build an OCaml library
-#
-
-# FILES[] =
-#    file1
-#    file2
-#
-# LIB = main
-#
-# .DEFAULT: $(OCamlLibrary $(LIB), $(FILES))
-
-################################################
-# Build an OCaml program
-#
-
-FILES[] =
-	tester
-#
-PROGRAM = test
-OCAML_LIBS += ../src/semicaml
-# OCAML_CLIBS +=
-# OCAML_OTHER_LIBS +=
-# OCAML_LIB_FLAGS +=
-#
 
 clean:
-	rm -f *~ *.opt *.cmi *.cmx *.o *.omc *.log *.cache $(PROGRAM)
-
-.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+	rm -f *~ *.o *.omc *.a *.out $(LIB)
