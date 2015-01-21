@@ -37,6 +37,18 @@ extern "C"
         return new std::int32_t( v );
     }
 
+    auto _semi_caml_new_float( float const v )
+        -> float*
+    {
+        return new float( v );
+    }
+
+    auto _semi_caml_new_bool( std::int8_t const v )
+        -> std::int8_t*
+    {
+        return new std::int8_t( v );
+    }
+
     using holder_t = void*;
 
     struct closure_bag_t

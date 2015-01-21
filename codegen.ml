@@ -7,9 +7,13 @@ let s_module = L.create_module context "SemiCaml"
 let builder = L.builder context
 
 let i32_ty = L.i32_type context
+let float_ty = L.float_type context
+let bool_ty = L.i8_type context
 let void_ty = L.void_type context
 
 let m_i32_ty = L.pointer_type i32_ty
+let m_float_ty = L.pointer_type float_ty
+let m_bool_ty = L.pointer_type bool_ty
 let m_unit_ty = L.pointer_type (L.i8_type context)
 
 
@@ -48,9 +52,19 @@ let function_bag_ty =
 
 (* intrinsic *)
 let f_new_int32 =
-  let params = Array.make 1 i32_ty in
+  let params = [|i32_ty|] in
   let func_ty = L.function_type m_i32_ty params in
   L.declare_function "_semi_caml_new_int32" func_ty s_module
+
+let f_new_float =
+  let params = [|float_ty|] in
+  let func_ty = L.function_type m_float_ty params in
+  L.declare_function "_semi_caml_new_float" func_ty s_module
+
+let f_new_bool =
+  let params = [|bool_ty|] in
+  let func_ty = L.function_type m_bool_ty params in
+  L.declare_function "_semi_caml_new_bool" func_ty s_module
 
 let f_new_value_holder_list =
   let params = Array.make 1 i32_ty in
@@ -118,18 +132,18 @@ let make_binary_op l r op =
     | _ -> raise InvalidOp
   in
   let make_sub tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_sub l r "" builder
+    | A.Float -> L.build_fsub l r "" builder
     | _ -> raise InvalidOp
   in
   let make_mul tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_mul l r "" builder
+    | A.Float -> L.build_fmul l r "" builder
     | _ -> raise InvalidOp
   in
   let make_div tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_sdiv l r "" builder (* signed div *)
+    | A.Float -> L.build_fdiv l r "" builder
     | _ -> raise InvalidOp
   in
   let make_or () = L.build_or l r "" builder
@@ -137,33 +151,33 @@ let make_binary_op l r op =
   let make_and () = L.build_and l r "" builder
   in
   let make_eq tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_icmp L.Icmp.Eq l r "" builder
+    | A.Float -> L.build_fcmp L.Fcmp.Ueq l r "" builder
     | _ -> raise InvalidOp
   in
   let make_not_eq tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_icmp L.Icmp.Ne l r "" builder
+    | A.Float -> L.build_fcmp L.Fcmp.Une l r "" builder
     | _ -> raise InvalidOp
   in
   let make_gte tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_icmp L.Icmp.Sge l r "" builder
+    | A.Float -> L.build_fcmp L.Fcmp.Uge l r "" builder
     | _ -> raise InvalidOp
   in
   let make_gt tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_icmp L.Icmp.Sgt l r "" builder
+    | A.Float -> L.build_fcmp L.Fcmp.Ugt l r "" builder
     | _ -> raise InvalidOp
   in
   let make_lte tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_icmp L.Icmp.Sle l r "" builder
+    | A.Float -> L.build_fcmp L.Fcmp.Ule l r "" builder
     | _ -> raise InvalidOp
   in
   let make_lt tk = match tk with
-      A.Int -> L.build_add l r "" builder
-    | A.Float -> L.build_fadd l r "" builder
+      A.Int -> L.build_icmp L.Icmp.Slt l r "" builder
+    | A.Float -> L.build_fcmp L.Fcmp.Ult l r "" builder
     | _ -> raise InvalidOp
   in
   match op with
@@ -192,8 +206,8 @@ let rec make_llvm_ir aast ip___ = match aast with
       Printf.printf "term\n";
       let v = match ast with
           Ast.IntLiteral v -> make_managed_value A.Int (L.const_int i32_ty v)
-        | Ast.FloatLiteral v -> make_managed_value A.Int (L.const_int i32_ty 42)
-        | Ast.BoolLiteral v -> make_managed_value A.Int (L.const_int i32_ty 42)
+        | Ast.FloatLiteral v -> make_managed_value A.Float (L.const_float float_ty v)
+        | Ast.BoolLiteral v -> make_managed_value A.Boolean (L.const_int bool_ty (if v then 1 else 0))
         | Ast.UnitLiteral -> L.const_bitcast (L.const_int i32_ty 0) m_unit_ty
         | _ -> raise NotSupportedNode
       in
