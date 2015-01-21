@@ -42,13 +42,13 @@ let test_lex2 test_ctxt =
   assert_equal ~msg:"Lexer 2"
                [Keyword Let; Identifier "x"; Op Assign; IntLiteral 3]
                (Lexer.lex (Lexer.char_list_of_string "let x = 3"))
-               
+
 let suite =
   "suite" >::: ["eval test" >::: ["interpreter test 1" >:: test_inter1;
                                   "interpreter test 2" >:: test_inter2;
                                   "interpreter test 3" >:: test_inter3;];
                 "lexer test" >::: ["lexer test 1" >:: test_lex1;
                                    "lexer test 2" >:: test_lex2];]
-                                       
+                 
 let run_test = run_test_tt_main suite
 

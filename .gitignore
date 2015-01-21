@@ -9,8 +9,9 @@
 .omakedb.lock
 *.omc
 
-semicaml.opt
 semicaml
+test
+*.opt
 
 a.out
 a.bc
@@ -18,3 +19,4 @@ a.s
 
 *.log
 *.cache
+
