@@ -10,7 +10,7 @@
 # How to build
 ```
 opam update
-opam install omake llvm
+opam install omake llvm ounit
 omake
 ```
 
