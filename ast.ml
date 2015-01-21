@@ -32,6 +32,7 @@ type ast =
   | IntLiteral of int
   | FloatLiteral of float
   | BoolLiteral of bool
+  | UnitLiteral
 
   | ArrayGet of string * ast
   | ArrayAssign of string * ast * ast

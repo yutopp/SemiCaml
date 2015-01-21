@@ -3,9 +3,19 @@ open Ast
 let parse filename =
   Program [
       (* let f a b = a + b *)
-      (*FuncDecl (
+      FuncDecl (
           "f",
           ["a"; "b"],
+          AddIntExpr (Id "a", Id "b"),
+          None
+        );
+
+      (*
+      (* failed case *)
+      (* let fi a b c = a + b *)
+      FuncDecl (
+          "fi",
+          ["a"; "b"; "c"],
           AddIntExpr (Id "a", Id "b"),
           None
         );
@@ -24,8 +34,35 @@ let parse filename =
                 )
             )
         );
-           
-      (*
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
+
+
+      (* let b = 1 = 2 *)
+      VerDecl (
+          "b",
+          EqualExpr (IntLiteral 1, IntLiteral 2),
+          None
+        );
+      (* print_bool b *)
+      FuncCall ("print_bool", [Id "b"]);
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
+
+
+      (* let b = 1 = 1 in print_bool b *)
+      VerDecl (
+          "b",
+          EqualExpr (IntLiteral 1, IntLiteral 1),
+          Some (
+              FuncCall ("print_bool", [Id "b"]);
+            )
+        );
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
+
       (* let hoge = f 10 20 in print_int hoge *)
       VerDecl (
           "hoge",
@@ -46,6 +83,11 @@ let parse filename =
             )
         );
 
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
+
+
       (* let f = let n = 10 in let g a = a + n in g *)
       VerDecl (
           "f",
@@ -64,8 +106,74 @@ let parse filename =
                 )
             ),
           None
-        )
-       *)
+        );
+
+
+      (* print_int (f 5) *)
+      FuncCall (
+          "print_int",
+          [
+            FuncCall (
+                "f",
+                [
+                  IntLiteral 5
+                ]
+              )
+          ]
+        );
+
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral] );
+
+
+      (* let g = let a = 10 in let b = 20 in let g c = a + b + c in print_int (g 10) *)
+      VerDecl (
+          "g",
+          VerDecl (
+              "a",
+              IntLiteral 10,
+              Some (
+                  VerDecl (
+                      "b",
+                      IntLiteral 20,
+
+                      Some (
+                          FuncDecl (
+                              "g",
+                              ["c"],
+                              AddIntExpr (AddIntExpr( Id "a", Id "b"), Id "c"),
+                              Some (
+                                  FuncCall ("print_int", [FuncCall ("g", [IntLiteral 10])] )
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+          None
+        );
+
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
+
+
+      (* let g = print_int 1; print_newline (); print_int 2; print_newline () *)
+      VerDecl (
+          "g",
+          Sequence (
+              FuncCall ("print_int", [IntLiteral 1] ),
+              Sequence (
+                  FuncCall ("print_newline", [UnitLiteral] ),
+                  Sequence (
+                      FuncCall ("print_int", [IntLiteral 2] ),
+                      FuncCall ("print_newline", [UnitLiteral] )
+                    )
+                )
+            ),
+          None
+        );
     ]
 
 let rec dump ?(offset=0) a =
