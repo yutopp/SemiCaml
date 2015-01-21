@@ -9,9 +9,9 @@
 .omakedb.lock
 *.omc
 
-semicaml
-test
 *.opt
+semicaml
+test/test
 
 a.out
 a.bc
