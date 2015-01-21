@@ -8,7 +8,7 @@ let builder = L.builder context
 
 let i32_ty = L.i32_type context
 let float_ty = L.float_type context
-let bool_ty = L.i8_type context
+let bool_ty = L.i1_type context
 let void_ty = L.void_type context
 
 let m_i32_ty = L.pointer_type i32_ty
@@ -196,8 +196,8 @@ let make_binary_op l r op =
 
 let make_managed_value tk v = match tk with
     A.Int -> L.build_call f_new_int32 [|v|] "" builder
-  | A.Float -> L.build_call f_new_int32 [|v|] "" builder
-  | A.Boolean -> L.build_call f_new_int32 [|v|] "" builder
+  | A.Float -> L.build_call f_new_float [|v|] "" builder
+  | A.Boolean -> L.build_call f_new_bool [|v|] "" builder
   | _ -> raise InvalidValue
 
 let rec make_llvm_ir aast ip___ = match aast with
@@ -296,6 +296,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        let ll = L.build_load l "" builder in
        let lr = L.build_load r "" builder in
        let v = make_binary_op ll lr op in
+
        Address (make_managed_value tk v)
      end
 
@@ -318,9 +319,6 @@ let rec make_llvm_ir aast ip___ = match aast with
            let fpp = L.build_in_bounds_gep bag [|L.const_int i32_ty 0; L.const_int i32_ty 0|] "" builder in
            let rf = L.build_load fpp "" builder in
 
-           Printf.printf "function\n";
-           flush stdout;
-           L.dump_type f_ty;
            flush stdout;
            let f = L.build_pointercast rf (L.pointer_type f_ty) "" builder in
 
@@ -369,6 +367,22 @@ let compile aast =
     Hashtbl.add val_table "print_int" (BuiltinFunction f)
   in
   decl_print_int();
+
+  let decl_print_bool () =
+    let params = [|m_bool_ty|] in
+    let func_ty = L.function_type m_unit_ty params in
+    let f = L.declare_function "_semi_caml_print_bool" func_ty s_module in
+    Hashtbl.add val_table "print_bool" (BuiltinFunction f)
+  in
+  decl_print_bool();
+
+  let decl_print_float () =
+    let params = [|m_float_ty|] in
+    let func_ty = L.function_type m_unit_ty params in
+    let f = L.declare_function "_semi_caml_print_float" func_ty s_module in
+    Hashtbl.add val_table "print_float" (BuiltinFunction f)
+  in
+  decl_print_float();
 
   let decl_print_newline () =
     let params = [|m_unit_ty|] in

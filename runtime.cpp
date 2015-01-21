@@ -21,6 +21,22 @@ extern "C"
         return nullptr;
     }
 
+    auto _semi_caml_print_bool( bool const* const v )
+        -> void*
+    {
+        std::cout << (*v ? "true" : "false");
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_float( float const* const v )
+        -> void*
+    {
+        std::cout << *v;
+
+        return nullptr;
+    }
+
     auto _semi_caml_print_newline( void* )
         -> void*
     {
@@ -43,10 +59,10 @@ extern "C"
         return new float( v );
     }
 
-    auto _semi_caml_new_bool( std::int8_t const v )
-        -> std::int8_t*
+    auto _semi_caml_new_bool( bool const v )
+        -> bool*
     {
-        return new std::int8_t( v );
+        return new bool( v );
     }
 
     using holder_t = void*;

@@ -35,9 +35,34 @@ let parse filename =
             )
         );
 
-
       (* print_newline () *)
       FuncCall ("print_newline", [UnitLiteral] );
+
+
+      (* let b = 1 = 2 *)
+      VerDecl (
+          "b",
+          EqualExpr (IntLiteral 1, IntLiteral 2),
+          None
+        );
+      (* print_bool b *)
+      FuncCall ("print_bool", [Id "b"]);
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
+
+
+      (* let b = 1 = 1 in print_bool b *)
+      VerDecl (
+          "b",
+          EqualExpr (IntLiteral 1, IntLiteral 1),
+          Some (
+              FuncCall ("print_bool", [Id "b"]);
+            )
+        );
+
+      (* print_newline () *)
+      FuncCall ("print_newline", [UnitLiteral]);
 
 
       (* let hoge = f 10 20 in print_int hoge *)
@@ -85,6 +110,7 @@ let parse filename =
           None
         );
 
+
       (* print_int (f 5) *)
       FuncCall (
           "print_int",
@@ -101,6 +127,7 @@ let parse filename =
 
       (* print_newline () *)
       FuncCall ("print_newline", [UnitLiteral] );
+
     ]
 
 let rec dump ?(offset=0) a =

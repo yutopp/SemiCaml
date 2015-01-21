@@ -250,6 +250,7 @@ let rec type_kind_of a = match a with
 
 let rec analyze' ast env depth ottk oenc =
   let term_check ast tk ottk = match ottk with
+      (* if expected type is specified and actual type is different from expected type, it is error *)
       Some ttk -> if tk = ttk then Term (ast, tk) else raise (SemanticError "is not matched")
     | None -> Term (ast, tk)
   in
@@ -460,6 +461,8 @@ let analyze ast =
   let env = EModule (Hashtbl.create 10) in
   (* register intrinsic functions to the symbol table *)
   ignore (save_intrinsic_term_item env "print_int" (IntrinsicFunc [Int; Unit]));
+  ignore (save_intrinsic_term_item env "print_bool" (IntrinsicFunc [Boolean; Unit]));
+  ignore (save_intrinsic_term_item env "print_float" (IntrinsicFunc [Float; Unit]));
   ignore (save_intrinsic_term_item env "print_newline" (IntrinsicFunc [Unit; Unit]));
 
   let attr_ast = match ast with
