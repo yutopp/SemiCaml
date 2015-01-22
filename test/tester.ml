@@ -124,13 +124,20 @@ let suite =
                                                                                         Some (AddIntExpr (Id "x", Id "y")))))))]);
                                        "eval 50", IntVal 3,
                                        (Program [VerDecl ("x", IntLiteral 3, Some (Id "x"))]);
-                                       (* can't test *)
+                                       (* Can't test because analyzed variable is changed *)
                                        (* "eval 51", FunVal (["x";"y"], BinOp (IdTerm ("x", Int), IdTerm ("y", Int), Add Int, Int), Int), *)
                                        (* (Program [FuncDecl ("func", ["x";"y";], AddIntExpr(Id "x", Id "y"), None)]); *)
                                        "eval 51", IntVal 5,
-                                       (Program [FuncDecl ("func", ["x";"y";], AddIntExpr(Id "x", Id "y"), Some (FuncCall("func", [IntLiteral 3; IntLiteral 2])))])
+                                       (Program [
+                                            FuncDecl ("func", ["x";"y";], AddIntExpr (Id "x", Id "y"),
+                                                      Some (FuncCall ("func", [IntLiteral 3; IntLiteral 2])))]);
+                                       (* "eval 52", IntVal 2, *)
+                                       (* (Program [ *)
+                                       (*     (\* let f a b = a / b in f 10 5 *\) *)
+                                       (*     FuncDecl ("f", ["a"; "b"], DivIntExpr (Id "a", Id "b"), None); *)
+                                       (*     FuncCall ("f", [IntLiteral 10; IntLiteral 5]); *)
+                                       (*    ]); *)
                                       ]);
-
                 "lexer test" >::: (List.map
                                      (fun (title,res,arg) ->
                                       title >::
@@ -155,8 +162,5 @@ let suite =
                                         (Program [AddIntExpr(IntLiteral 2,IntLiteral 3)])]);
                 (* "codegen test"; *)
                ]
-                 
+
 let run_test = run_test_tt_main suite
-                                
-let _ = eval (Program [FuncDecl ("func", ["x";"y";], AddIntExpr(Id "x", Id "y"), Some (FuncCall("func", [IntLiteral 3; IntLiteral 2])))]);
-(* let _ = eval (Program [FuncDecl ("func", ["x";"y";], AddIntExpr(Id "x", Id "y"), None)]); *)

@@ -56,6 +56,7 @@ let rec eval' input =
   let gte =  { int = ( >= ); float = ( >= ); bool = ( >= ) } in
   match input with
   | Flow [e] -> eval' e
+  | Flow (e :: rest) -> eval' (Flow rest)
   | Term (e,_) ->
      begin
        match e with
