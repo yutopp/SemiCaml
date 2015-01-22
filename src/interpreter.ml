@@ -111,8 +111,8 @@ let rec eval' input =
           ignore (List.map2 (fun x v -> env_ext val_table x v) pro_args (List.map eval' call_args));
           eval' e1
        | _ -> failwith "func value expected"
-     end               
+     end
   | _ -> failwith "unknow exp"
-                  
+
 let eval input =
   eval' (Analyzer.analyze input)
