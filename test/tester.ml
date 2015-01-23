@@ -128,15 +128,23 @@ let suite =
                                        (* "eval 51", FunVal (["x";"y"], BinOp (IdTerm ("x", Int), IdTerm ("y", Int), Add Int, Int), Int), *)
                                        (* (Program [FuncDecl ("func", ["x";"y";], AddIntExpr(Id "x", Id "y"), None)]); *)
                                        "eval 51", IntVal 5,
-                                       (Program [
-                                            FuncDecl ("func", ["x";"y";], AddIntExpr (Id "x", Id "y"),
-                                                      Some (FuncCall ("func", [IntLiteral 3; IntLiteral 2])))]);
-                                       (* "eval 52", IntVal 2, *)
-                                       (* (Program [ *)
-                                       (*     (\* let f a b = a / b in f 10 5 *\) *)
-                                       (*     FuncDecl ("f", ["a"; "b"], DivIntExpr (Id "a", Id "b"), None); *)
-                                       (*     FuncCall ("f", [IntLiteral 10; IntLiteral 5]); *)
-                                       (*    ]); *)
+                                       (Program [FuncDecl ("func", ["x";"y";], AddIntExpr (Id "x", Id "y"),
+                                                            Some (FuncCall ("func", [IntLiteral 3; IntLiteral 2])))]);
+                                       "eval 52", IntVal 2,
+                                       (Program [FuncDecl ("f", ["a"; "b"], DivIntExpr (Id "a", Id "b"), None);
+                                                  FuncCall ("f", [IntLiteral 10; IntLiteral 5]);]);
+                                       "eval 53", UnitVal,
+                                       (Program [Sequence (UnitLiteral,UnitLiteral)]);
+                                       "eval 54", FloatVal 0.,
+                                       (Program [VerDecl ("arr", ArrayNew ("float", IntLiteral 10), None);
+                                                 ArrayGet ("arr", IntLiteral 2);]);
+                                       "eval 55", FloatVal 3.14,
+                                       (Program [VerDecl ("arr", ArrayNew ("float", IntLiteral 10), None);
+                                                 ArrayAssign ("arr", IntLiteral 2, FloatLiteral 3.14);
+                                                 ArrayGet ("arr", IntLiteral 2);]);
+                                       "eval 56", UnitVal,
+                                       (Program [VerDecl ("arr", ArrayNew ("float", IntLiteral 5),
+                                                         Some (ArrayAssign ("arr", IntLiteral 0, FloatLiteral 0.)))])
                                       ]);
                 "lexer test" >::: (List.map
                                      (fun (title,res,arg) ->

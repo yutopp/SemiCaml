@@ -6,14 +6,17 @@ type value =
   | IntVal of int
   | FloatVal of float
   | BoolVal of bool
+  | ArrayVal of value array
   | FunVal of string list * a_ast * Analyzer.type_kind
-  | ANone
+  | UnitVal
 
 let val_to_str values = match values with
   | IntVal n -> Printf.sprintf "%d\n" n
   | FloatVal n -> Printf.sprintf "%f\n" n
   | BoolVal b -> Printf.sprintf "%b\n" b
+  | ArrayVal a -> "array"
   | FunVal (_,_,Func types) -> List.fold_left ( ^ ) "func" (List.map (fun t -> Printf.sprintf ":" ^ Analyzer.to_string t) types)
+  | UnitVal -> Printf.sprintf "()"
   | _ -> failwith "Undefined Value"
 
 
@@ -56,13 +59,15 @@ let rec eval' input =
   let gte =  { int = ( >= ); float = ( >= ); bool = ( >= ) } in
   match input with
   | Flow [e] -> eval' e
-  | Flow (e :: rest) -> eval' (Flow rest)
+  | Flow (e :: rest) -> ignore (eval' e); eval' (Flow rest)
+  | Seq (e1,e2) -> ignore(eval' e1); eval' e2
   | Term (e,_) ->
      begin
        match e with
        | IntLiteral n -> IntVal n
        | FloatLiteral r -> FloatVal r
        | BoolLiteral b -> BoolVal b
+       | UnitLiteral -> UnitVal
        | _ -> failwith "not expected type"
      end
 
@@ -113,7 +118,38 @@ let rec eval' input =
           eval' e1
        | _ -> failwith "func value expected"
      end
+  (* | ArrayAssign of string * a_ast * a_ast * type_kind *)
+  | ArrayCreate (size,t) -> 
+     begin
+       match (eval' size, t) with
+       | (IntVal n, Array Int) -> ArrayVal (Array.make n (IntVal 0))
+       | (IntVal n, Array Float) -> ArrayVal (Array.make n (FloatVal 0.))
+       | _ -> failwith "not expected type"
+     end
+  | ArrayRef (id,index,_) ->
+     begin
+       match (eval' index) with
+       | IntVal n ->
+          let arr = lookup id val_table in
+          begin
+            match arr with
+            | ArrayVal arr -> arr.(n)
+            | _ -> failwith "variable is not ArrayVal"
+          end                         
+       | _ -> failwith "array ref expected Int"
+     end
+  | ArrayAssign (id,index,new_val,_) ->
+     begin
+       let arr = lookup id val_table in
+       begin
+         match (eval' index, eval' new_val, arr) with
+         | (IntVal n, new_val, ArrayVal arr) ->
+            arr.(n) <- new_val;
+            UnitVal
+         | _ -> failwith "not expected type"
+       end
+     end
   | _ -> failwith "unknow exp"
-
+                  
 let eval input =
   eval' (Analyzer.analyze input)
