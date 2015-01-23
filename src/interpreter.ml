@@ -1,24 +1,43 @@
 open Ast
 open Analyzer
-(* todo *)
 
 type value =
   | IntVal of int
   | FloatVal of float
   | BoolVal of bool
-  | ArrayVal of value array
-  | FunVal of string list * a_ast * Analyzer.type_kind
+  | ArrayVal of value array * Analyzer.type_kind
+  | FunVal of string *  string list * Analyzer.a_ast * Analyzer.type_kind
   | UnitVal
 
-let val_to_str values = match values with
-  | IntVal n -> Printf.sprintf "%d\n" n
-  | FloatVal n -> Printf.sprintf "%f\n" n
-  | BoolVal b -> Printf.sprintf "%b\n" b
-  | ArrayVal a -> "array"
-  | FunVal (_,_,Func types) -> List.fold_left ( ^ ) "func" (List.map (fun t -> Printf.sprintf ":" ^ Analyzer.to_string t) types)
-  | UnitVal -> Printf.sprintf "()"
+let rec recursive_to_string list printer delimiter =
+  match list with
+  | [] -> ""
+  | head :: [] -> printer head
+  | head :: tail -> (printer head) ^ delimiter ^ (recursive_to_string tail printer delimiter)
+
+let rec val_to_str values = match values with
+  | IntVal n -> Printf.sprintf "- : int = %d" n
+  | FloatVal n -> Printf.sprintf "- : float = %F" n
+  | BoolVal b -> Printf.sprintf "- : bool = %b" b
+  | ArrayVal (arr, tk) ->
+     "- : " ^ (Analyzer.to_string tk) ^ " array = [|" ^
+       (recursive_to_string (Array.to_list arr) in_array_printer "; ") ^
+         "|]"
+  | FunVal (name,_,_,Func types) ->
+     let dot_pos = String.index name '.' in
+     let erase_number_name = String.sub name 0 dot_pos in
+     "val " ^ erase_number_name ^ " : " ^
+       (recursive_to_string types Analyzer.to_string " -> ") ^
+         " = <fun>"
+  | UnitVal -> Printf.sprintf "- : unit = ()"
   | _ -> failwith "Undefined Value"
 
+and in_array_printer values = match values with
+  | IntVal n -> Printf.sprintf "%d" n
+  | FloatVal r -> Printf.sprintf "%F" r
+  | BoolVal b -> Printf.sprintf "%b" b
+  | UnitVal -> Printf.sprintf "()"
+  | _ -> failwith "not expected type"
 
 type constant_folder = {
   int : int -> int -> bool;
@@ -105,25 +124,25 @@ let rec eval' input =
   | VarDecl (id,e1,_,Some e2) ->
      env_ext val_table id (eval' e1);
      eval' e2
-  | FuncDecl (id,args,e1,t,_,None) -> lookup id (env_ext val_table id (FunVal (List.map Analyzer.get_id_of args, e1, t)))
+  | FuncDecl (id,args,e1,t,_,None) -> lookup id (env_ext val_table id (FunVal (id,List.map Analyzer.get_id_of args, e1, t)))
   | FuncDecl (id,args,e1,t,_,Some e2) ->
-     (env_ext val_table id (FunVal (List.map Analyzer.get_id_of args, e1, t)));
+     (env_ext val_table id (FunVal (id, List.map Analyzer.get_id_of args, e1, t)));
      eval' e2
   | CallFunc (id,call_args,_) ->
      let func = lookup id val_table in
      begin
        match func with
-       | FunVal (pro_args,e1,_) ->
+       | FunVal (_,pro_args,e1,_) ->
           ignore (List.map2 (fun x v -> env_ext val_table x v) pro_args (List.map eval' call_args));
           eval' e1
        | _ -> failwith "func value expected"
      end
-  (* | ArrayAssign of string * a_ast * a_ast * type_kind *)
-  | ArrayCreate (size,t) -> 
+  | ArrayCreate (size,t) ->
      begin
        match (eval' size, t) with
-       | (IntVal n, Array Int) -> ArrayVal (Array.make n (IntVal 0))
-       | (IntVal n, Array Float) -> ArrayVal (Array.make n (FloatVal 0.))
+       | (IntVal n, Array Int) -> ArrayVal (Array.make n (IntVal 0), Int)
+       | (IntVal n, Array Float) -> ArrayVal (Array.make n (FloatVal 0.), Float)
+       | (IntVal n, Array Boolean) -> ArrayVal (Array.make n (BoolVal true), Float)
        | _ -> failwith "not expected type"
      end
   | ArrayRef (id,index,_) ->
@@ -133,9 +152,9 @@ let rec eval' input =
           let arr = lookup id val_table in
           begin
             match arr with
-            | ArrayVal arr -> arr.(n)
+            | ArrayVal (arr, _) -> arr.(n)
             | _ -> failwith "variable is not ArrayVal"
-          end                         
+          end
        | _ -> failwith "array ref expected Int"
      end
   | ArrayAssign (id,index,new_val,_) ->
@@ -143,13 +162,16 @@ let rec eval' input =
        let arr = lookup id val_table in
        begin
          match (eval' index, eval' new_val, arr) with
-         | (IntVal n, new_val, ArrayVal arr) ->
+         | (IntVal n, new_val, ArrayVal (arr, _)) ->
             arr.(n) <- new_val;
             UnitVal
          | _ -> failwith "not expected type"
        end
      end
   | _ -> failwith "unknow exp"
-                  
+
 let eval input =
   eval' (Analyzer.analyze input)
+
+let interpreter input =
+  val_to_str (eval input)
