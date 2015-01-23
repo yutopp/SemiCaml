@@ -20,15 +20,17 @@ let rec val_to_str values = match values with
   | FloatVal n -> Printf.sprintf "- : float = %F" n
   | BoolVal b -> Printf.sprintf "- : bool = %b" b
   | ArrayVal (arr, tk) ->
-     "- : " ^ (Analyzer.to_string tk) ^ " array = [|" ^
-       (recursive_to_string (Array.to_list arr) in_array_printer "; ") ^
-         "|]"
+     Printf.sprintf
+       "- : %s array = [|%s|]"
+       (Analyzer.to_string tk)
+       (recursive_to_string (Array.to_list arr) in_array_printer "; ")
   | FunVal (name,_,_,Func types) ->
      let dot_pos = String.index name '.' in
      let erase_number_name = String.sub name 0 dot_pos in
-     "val " ^ erase_number_name ^ " : " ^
-       (recursive_to_string types Analyzer.to_string " -> ") ^
-         " = <fun>"
+     Printf.sprintf
+       "val %s : %s = <fun>"
+       erase_number_name
+       (recursive_to_string types Analyzer.to_string " -> ")
   | UnitVal -> Printf.sprintf "- : unit = ()"
   | _ -> failwith "Undefined Value"
 
