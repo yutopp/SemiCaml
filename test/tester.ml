@@ -10,7 +10,7 @@ let suite =
                                      "eval" ^ title >::
                                        (fun test_ctxt ->
                                         assert_equal
-                                          ~printer:Interpreter.val_to_str
+                                          ~printer:Interpreter.rustic_val_to_str
                                           res
                                           (Interpreter.eval arg)))
                                     ["1",
@@ -251,7 +251,23 @@ let suite =
                                                   ArrayAssign (
                                                       "arr",
                                                       IntLiteral 0,
-                                                      FloatLiteral 0.)))])
+                                                      FloatLiteral 0.)))]);
+                                     "33",
+                                     BoolVal false,
+                                     (Program [
+                                          VerDecl (
+                                              "arr",
+                                              ArrayNew (
+                                                  "bool",
+                                                  IntLiteral 3),
+                                              None);
+                                          ArrayAssign (
+                                              "arr",
+                                              IntLiteral 0,
+                                              BoolLiteral false);
+                                          ArrayGet (
+                                              "arr",
+                                              IntLiteral 0)]);
                                     ]);
                 "interpreter test" >::: (List.map
                                            (fun (title,res,arg) ->
@@ -260,7 +276,7 @@ let suite =
                                                assert_equal
                                                  ~printer:(fun s -> Printf.sprintf "%s" s)
                                                  res
-                                                 (Interpreter.interpreter arg)))
+                                                 (Interpreter.interpreter' arg)))
                                            ["1",
                                             "- : int = 1",
                                             (Program [
@@ -321,7 +337,7 @@ let suite =
                                              res
                                              (Analyzer.analyze arg)))
                                        ["1",
-                                        Flow [
+                                        (Flow [
                                             BinOp (
                                                 Term (
                                                     IntLiteral 2,
@@ -330,11 +346,11 @@ let suite =
                                                     IntLiteral 3,
                                                     Int),
                                                 Add Int,
-                                                Int)],
+                                                Int)]),
                                         (Program [
-                                             AddIntExpr (
-                                                 IntLiteral 2,
-                                                 IntLiteral 3)]);
+                                            AddIntExpr (
+                                                IntLiteral 2,
+                                                IntLiteral 3)]);
                                        ]);
                 (* "codegen test"; *)
                ]
