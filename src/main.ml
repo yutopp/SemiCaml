@@ -1,4 +1,5 @@
 
+(*
 let () =
   Printf.printf "mean mean\n";
   let ast = Parser.parse "test.seml" in
@@ -7,3 +8,4 @@ let () =
   flush stdout;
   let llvm_module = Codegen.compile attr_ast in
   Codegen.create_executable llvm_module
+  *)
