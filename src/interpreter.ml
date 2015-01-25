@@ -1,6 +1,6 @@
 open Ast
 open Analyzer
-       
+
 type value =
   | IntVal of int
   | FloatVal of float
@@ -14,14 +14,14 @@ let rec recursive_to_string list printer delimiter =
   | [] -> ""
   | head :: [] -> printer head
   | head :: tail -> (printer head) ^ delimiter ^ (recursive_to_string tail printer delimiter)
-                                                   
+
 let rustic_val_to_str values = match values with
   | IntVal n -> Printf.sprintf "%d" n
   | FloatVal r -> Printf.sprintf "%F" r
   | BoolVal b -> Printf.sprintf "%b" b
   | UnitVal -> Printf.sprintf "()"
   | _ -> failwith "not expected type"
-                  
+
 let rec val_to_str values = match values with
   | IntVal n -> Printf.sprintf "- : int = %d" n
   | FloatVal n -> Printf.sprintf "- : float = %F" n
@@ -46,13 +46,13 @@ type constant_folder = {
   float : float -> float -> bool;
   bool : bool -> bool -> bool;
 }
-                         
+
 let val_table: (string, value) Hashtbl.t = Hashtbl.create 10
-                                                          
+
 let env_ext env x v = Hashtbl.add val_table x v
-                                  
+
 let lookup x env = Hashtbl.find val_table x
-                                
+
 let rec eval' input =
   let intop f e1 e2 = match (eval' e1, eval' e2) with
     | (IntVal n1, IntVal n2) -> IntVal (f n1 n2)
@@ -91,14 +91,14 @@ let rec eval' input =
        | UnitLiteral -> UnitVal
        | _ -> failwith "not expected type"
      end
-       
+
   | BinOp (e1,e2,Add Int,Int) -> intop ( + ) e1 e2
   | BinOp (e1,e2,Sub Int,Int) -> intop ( - ) e1 e2
   | BinOp (e1,e2,Mul Int,Int) -> intop ( * ) e1 e2
   | BinOp (e1,e2,Div Int,Int) when (eval' e2 = IntVal 0) ->
      failwith "0 division"
   | BinOp (e1,e2,Div Int,Int) -> intop ( / ) e1 e2
-                                       
+
   | BinOp (e1,e2,Add Float,Float) -> floatop ( +. ) e1 e2
   | BinOp (e1,e2,Sub Float,Float) -> floatop ( -. ) e1 e2
   | BinOp (e1,e2,Mul Float,Float) -> floatop ( *. ) e1 e2

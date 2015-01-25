@@ -1,6 +1,6 @@
 open Ast
 open Token
-       
+
 (* ast -> (token * ast) list -> ast *)
 let rec make_left_associative_tree ast token_asts = match token_asts with
   | [] -> ast
@@ -37,3 +37,4 @@ let rec make_left_associative_tree ast token_asts = match token_asts with
        (DivFloatExpr (ast, FloatLiteral r))
        rest
   | _ -> failwith "not expected type"
+

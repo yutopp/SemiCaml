@@ -425,7 +425,7 @@ let suite =
                                                  [Op MulFloat, FloatLiteral 3.2;
                                                   Op DivFloat, FloatLiteral 2.3;
                                                   Op DivFloat, FloatLiteral 1.4;
-                                                  Op MulFloat, FloatLiteral 0.5];                                                 
+                                                  Op MulFloat, FloatLiteral 0.5];
                                                 ]);
                 "analyze test" >::: (List.map
                                        (fun (title,res,arg) ->
