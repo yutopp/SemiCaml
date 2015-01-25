@@ -92,6 +92,9 @@
 USE_OCAMLFIND = true
 #
 OCAMLPACKS[] =
+	llvm
+	llvm.bitwriter
+	llvm.analysis
 	oUnit
 
 if $(not $(OCAMLFIND_EXISTS))
