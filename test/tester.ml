@@ -364,7 +364,7 @@ let suite =
                                                   todo "unimplemented";
                                                   assert_equal
                                                     res
-                                                    (associate_left arg)))
+                                                    (Associate_left.associate_left arg)))
                                               ["1",
                                                AddIntExpr (
                                                    AddIntExpr (
