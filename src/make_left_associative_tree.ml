@@ -10,9 +10,7 @@ let rec make_left_associative_tree ast token_asts = match token_asts with
        rest
   | (Op SubInt, IntLiteral n) :: rest ->
      make_left_associative_tree
-       (SubIntExpr (
-            ast,
-            IntLiteral n))
+       (SubIntExpr (ast, IntLiteral n))
        rest
   | (Op AddFloat, FloatLiteral r) :: rest ->
      make_left_associative_tree
@@ -28,9 +26,7 @@ let rec make_left_associative_tree ast token_asts = match token_asts with
        rest
   | (Op DivInt, IntLiteral n) :: rest ->
      make_left_associative_tree
-       (DivIntExpr (
-            ast,
-            IntLiteral n))
+       (DivIntExpr (ast, IntLiteral n))
        rest
   | (Op MulFloat, FloatLiteral r) :: rest ->
      make_left_associative_tree
