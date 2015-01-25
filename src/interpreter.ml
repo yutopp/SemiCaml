@@ -6,7 +6,9 @@ type value =
   | FloatVal of float
   | BoolVal of bool
   | ArrayVal of value array * Analyzer.type_kind
+  | TopVarVal of string * value * Analyzer.type_kind
   | FunVal of string * string list * Analyzer.a_ast * Analyzer.type_kind
+  | IntrinsicFunVal of Analyzer.type_kind list
   | UnitVal
 
 let rec recursive_to_string list printer delimiter =
@@ -15,13 +17,23 @@ let rec recursive_to_string list printer delimiter =
   | head :: [] -> printer head
   | head :: tail -> (printer head) ^ delimiter ^ (recursive_to_string tail printer delimiter)
 
-let rustic_val_to_str values = match values with
+let rec rustic_val_to_str values = match values with
   | IntVal n -> Printf.sprintf "%d" n
   | FloatVal r -> Printf.sprintf "%F" r
   | BoolVal b -> Printf.sprintf "%b" b
-  | UnitVal -> Printf.sprintf "()"
-  | _ -> failwith "not expected type"
+  | ArrayVal (arr, tk) ->
+     Printf.sprintf
+       "%s array = [|%s|]"
+       (Analyzer.to_string tk)
+       (recursive_to_string (Array.to_list arr) rustic_val_to_str "; ")
+  | UnitVal -> "()"
+  | _ -> failwith "not expected type in rustic_val_to_str"
 
+let delete_num_in_str id =
+  let dot_pos = String.index id '.' in
+  let erase_num_id = String.sub id 0 dot_pos in
+  erase_num_id
+                  
 let rec val_to_str values = match values with
   | IntVal n -> Printf.sprintf "- : int = %d" n
   | FloatVal n -> Printf.sprintf "- : float = %F" n
@@ -31,16 +43,22 @@ let rec val_to_str values = match values with
        "- : %s array = [|%s|]"
        (Analyzer.to_string tk)
        (recursive_to_string (Array.to_list arr) rustic_val_to_str "; ")
+  | TopVarVal (id, value, t) ->
+     Printf.sprintf
+       (* val arr : int array = [||] *)
+       "val %s : %s = %s"
+       id
+       (Analyzer.to_string t)
+       (rustic_val_to_str value)
   | FunVal (name,_,_,Analyzer.Func types) ->
-     let dot_pos = String.index name '.' in
-     let erase_number_name = String.sub name 0 dot_pos in
+     let name_ = delete_num_in_str name in
      Printf.sprintf
        "val %s : %s = <fun>"
-       erase_number_name
+       name_
        (recursive_to_string types Analyzer.to_string " -> ")
   | UnitVal -> Printf.sprintf "- : unit = ()"
   | _ -> failwith "Undefined Value"
-
+                  
 type constant_folder = {
   int : int -> int -> bool;
   float : float -> float -> bool;
@@ -50,9 +68,27 @@ type constant_folder = {
 let val_table: (string, value) Hashtbl.t = Hashtbl.create 10
 
 let env_ext env x v = Hashtbl.add val_table x v
-
-let lookup x env = Hashtbl.find val_table x
-
+                                  
+let lookup x env =
+  try
+    Hashtbl.find val_table x
+  with
+  | Not_found ->
+     begin 
+       try
+         let x_ = delete_num_in_str x in
+         Hashtbl.find val_table x_
+       with
+       | Not_found -> failwith "undefined"
+     end
+  | _ -> failwith "undefined"
+                                
+let intrinsic_func =
+  ignore(env_ext val_table "print_int" (IntrinsicFunVal [Int;Unit]));
+  ignore(env_ext val_table "print_float" (IntrinsicFunVal [Float;Unit]));
+  ignore(env_ext val_table "print_bool" (IntrinsicFunVal [Boolean;Unit]));
+  ignore(env_ext val_table "print_newline" (IntrinsicFunVal [Unit;Unit]))
+        
 let rec eval' input =
   let intop f e1 e2 = match (eval' e1, eval' e2) with
     | (IntVal n1, IntVal n2) -> IntVal (f n1 n2)
@@ -89,7 +125,7 @@ let rec eval' input =
        | FloatLiteral r -> FloatVal r
        | BoolLiteral b -> BoolVal b
        | UnitLiteral -> UnitVal
-       | _ -> failwith "not expected type"
+       | _ -> failwith "not expected type in term e1"
      end
 
   | BinOp (e1,e2,Add Int,Int) -> intop ( + ) e1 e2
@@ -124,19 +160,17 @@ let rec eval' input =
        | _ -> failwith "first exp is expected bool value"
      end
   | IdTerm (id,_) -> lookup id val_table
-  | VarDecl (id,e1,_,None) -> lookup id (env_ext val_table id (eval' e1))
+  | VarDecl (id,e1,t,None) ->
+     let id_ = delete_num_in_str id in
+     lookup id_ (env_ext val_table id_ (TopVarVal (id_, eval' e1, t)))
   | VarDecl (id,e1,_,Some e2) ->
      env_ext val_table id (eval' e1);
      eval' e2
   | FuncDecl (id,args,e1,t,_,None) ->
-     let arg_ids = List.map Analyzer.get_id_of
-                            args
-     in
+     let arg_ids = List.map Analyzer.get_id_of args in
      lookup id (env_ext val_table id (FunVal (id, arg_ids, e1, t)))
   | FuncDecl (id,args,e1,t,_,Some e2) ->
-     let arg_ids = List.map Analyzer.get_id_of
-                            args
-     in
+     let arg_ids = List.map Analyzer.get_id_of args in
      (env_ext val_table id (FunVal (id, arg_ids, e1, t)));
      eval' e2
   | CallFunc (id,call_args,_) ->
@@ -149,6 +183,24 @@ let rec eval' input =
                             pro_args
                             evaled_args);
           eval' e1
+       | IntrinsicFunVal args ->
+          let evaled_args = List.map eval' call_args in
+          begin 
+            match (id, List.hd evaled_args) with
+            | ("print_int", IntVal n) ->
+               print_int n;
+               UnitVal
+            | ("print_float", FloatVal r) ->
+               print_float r;
+               UnitVal
+            | ("print_bool", BoolVal b) ->
+               Printf.printf "%b" b;
+               UnitVal
+            | ("print_newline", UnitVal) ->
+               print_newline ();
+               UnitVal
+            | _ -> failwith "this function expected int"
+          end
        | _ -> failwith "func value is expected"
      end
   | ArrayCreate (size,t) ->
@@ -166,7 +218,8 @@ let rec eval' input =
           let arr = lookup id val_table in
           begin
             match arr with
-            | ArrayVal (arr, t) -> arr.(n)
+            | ArrayVal (arr, _) -> arr.(n)
+            | TopVarVal (_,ArrayVal (arr, _),_) -> arr.(n)
             | _ -> failwith "variable is not ArrayVal"
           end
        | _ -> failwith "array ref expected Int"
@@ -179,7 +232,10 @@ let rec eval' input =
          | (IntVal n, new_val, ArrayVal (arr, _)) ->
             arr.(n) <- new_val;
             UnitVal
-         | _ -> failwith "not expected type"
+         | (IntVal n, new_val, TopVarVal (_, ArrayVal (arr, _), _)) ->
+            arr.(n) <- new_val;
+            UnitVal
+         | _ -> failwith "not expected type in ArrayAssign"
        end
      end
   | _ -> failwith "unknow exp"

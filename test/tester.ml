@@ -292,17 +292,17 @@ let suite =
                                      (* let arr = Array.make 10 0.;; arr.(2) <- 3.14;; arr.(2) *)
                                      (Program [
                                           VerDecl (
-                                              "arr",
+                                              "array",
                                               ArrayNew (
                                                   "float",
                                                   IntLiteral 10),
                                               None);
                                           ArrayAssign (
-                                              "arr",
+                                              "array",
                                               IntLiteral 2,
                                               FloatLiteral 3.14);
                                           ArrayGet (
-                                              "arr",
+                                              "array",
                                               IntLiteral 2)]);
 
                                      "32",
@@ -385,8 +385,40 @@ let suite =
                                             (Program [
                                                  ArrayNew (
                                                      "int",
-                                                     IntLiteral 3)]);
-
+                                                     IntLiteral 3)]);                                            
+                                            "8",
+                                            "- : unit = ()",
+                                            (* let a = 1 in print_int (a + 6) *)
+                                            (Program [VerDecl (
+                                                          "a",
+                                                          IntLiteral 1,
+                                                          Some (
+                                                              FuncCall (
+                                                                  "print_int",
+                                                                  [AddIntExpr (
+                                                                       Id "a",
+                                                                       IntLiteral 6)])))]);
+                                            "9",
+                                            "- : unit = ()",
+                                            (Program [
+                                                 Sequence (
+                                                     FuncCall (
+                                                         "print_newline",
+                                                         [UnitLiteral]),
+                                                     Sequence (
+                                                         FuncCall (
+                                                             "print_float",
+                                                             [FloatLiteral 3.1]),
+                                                         FuncCall (
+                                                             "print_bool",
+                                                             [BoolLiteral true])))]);
+                                            "10",
+                                            "val a : int = 3",
+                                            (Program [
+                                                 VerDecl (
+                                                     "a",
+                                                     IntLiteral 3,
+                                                     None)]);
                                            ]);
                 "lexer test" >::: (List.map
                                      (fun (title,res,arg) ->

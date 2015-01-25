@@ -37,5 +37,3 @@ let rec make_left_associative_tree ast token_asts = match token_asts with
        (DivFloatExpr (ast, any_ast))
        rest
   | _ -> failwith "not expected type"
-
-
