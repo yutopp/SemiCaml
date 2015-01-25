@@ -4,37 +4,38 @@ open Token
 (* ast -> (token * ast) list -> ast *)
 let rec make_left_associative_tree ast token_asts = match token_asts with
   | [] -> ast
-  | (Op AddInt, IntLiteral n) :: rest ->
+  | (Op AddInt, any_ast) :: rest ->
      make_left_associative_tree
-       (AddIntExpr (ast, IntLiteral n))
+       (AddIntExpr (ast, any_ast))
        rest
-  | (Op SubInt, IntLiteral n) :: rest ->
+  | (Op SubInt, any_ast) :: rest ->
      make_left_associative_tree
-       (SubIntExpr (ast, IntLiteral n))
+       (SubIntExpr (ast, any_ast))
        rest
-  | (Op AddFloat, FloatLiteral r) :: rest ->
+  | (Op AddFloat, any_ast) :: rest ->
      make_left_associative_tree
-       (AddFloatExpr (ast, FloatLiteral r))
+       (AddFloatExpr (ast, any_ast))
        rest
-  | (Op SubFloat, FloatLiteral r) :: rest ->
+  | (Op SubFloat, any_ast) :: rest ->
      make_left_associative_tree
-       (SubFloatExpr (ast, FloatLiteral r))
+       (SubFloatExpr (ast, any_ast))
        rest
-  | (Op MulInt, IntLiteral n) :: rest ->
+  | (Op MulInt, any_ast) :: rest ->
      make_left_associative_tree
-       (MulIntExpr (ast, IntLiteral n))
+       (MulIntExpr (ast, any_ast))
        rest
-  | (Op DivInt, IntLiteral n) :: rest ->
+  | (Op DivInt, any_ast) :: rest ->
      make_left_associative_tree
-       (DivIntExpr (ast, IntLiteral n))
+       (DivIntExpr (ast, any_ast))
        rest
-  | (Op MulFloat, FloatLiteral r) :: rest ->
+  | (Op MulFloat, any_ast) :: rest ->
      make_left_associative_tree
-       (MulFloatExpr (ast, FloatLiteral r))
+       (MulFloatExpr (ast, any_ast))
        rest
-  | (Op DivFloat, FloatLiteral r) :: rest ->
+  | (Op DivFloat, any_ast) :: rest ->
      make_left_associative_tree
-       (DivFloatExpr (ast, FloatLiteral r))
+       (DivFloatExpr (ast, any_ast))
        rest
   | _ -> failwith "not expected type"
+
 
