@@ -17,6 +17,7 @@ let suite =
                                     ["1",
                                      IntVal 3,
                                      (Program [IntLiteral 3]);
+
                                      "2",
                                      IntVal 10,
                                      (Program [
@@ -25,113 +26,132 @@ let suite =
                                               AddIntExpr (
                                                   IntLiteral 2,
                                                   IntLiteral 5))]);
+
                                      "3",
                                      IntVal 3,
                                      (Program [
                                           SubIntExpr (
                                               IntLiteral 5,
                                               IntLiteral 2)]);
+
                                      "4",
                                      IntVal 6,
                                      (Program [
                                           MulIntExpr (
                                               IntLiteral 2,
                                               IntLiteral 3)]);
+
                                      "5",
                                      IntVal 2,
                                      (Program [
                                           DivIntExpr (
                                               IntLiteral 10,
                                               IntLiteral 5)]);
+
                                      "6",
                                      FloatVal 5.,
                                      (Program [
                                           AddFloatExpr (
                                               FloatLiteral 2.,FloatLiteral 3.)]);
+
                                      "7",
                                      FloatVal 2.,
                                      (Program [
                                           SubFloatExpr (
                                               FloatLiteral 5.,
                                               FloatLiteral 3.)]);
+
                                      "8",
                                      FloatVal 6.,
                                      (Program [
                                           MulFloatExpr (
                                               FloatLiteral 2.,
                                               FloatLiteral 3.)]);
+
                                      "9",
                                      FloatVal 2.,
                                      (Program [
                                           DivFloatExpr (
                                               FloatLiteral 6.,
                                               FloatLiteral 3.)]);
+
                                      "10",
                                      BoolVal true,
                                      (Program [
                                           EqualExpr (
                                               IntLiteral 3,
                                               IntLiteral 3)]);
+
                                      (* "11", *)
                                      (* BoolVal false, *)
                                      (* (Program [ *)
                                      (*      EqualExpr ( *)
                                      (*          BoolLiteral true, *)
                                      (*          BoolLiteral false)]); *)
+
                                      (* "12", *)
                                      (* BoolVal true, *)
                                      (* (Program [ *)
                                      (*      EqualExpr ( *)
                                      (*          BoolLiteral true, *)
                                      (*          BoolLiteral true)]); *)
+
                                      "13",
                                      BoolVal true,
                                      (Program [
                                           NotEqualExpr (
                                               IntLiteral 3,
                                               IntLiteral 2)]);
+
                                      (* "14", *)
                                      (* BoolVal true, *)
                                      (* (Program [ *)
                                      (*      NotEqualExpr ( *)
                                      (*          BoolLiteral true, *)
                                      (*          BoolLiteral false)]); *)
+
                                      (* "15", *)
                                      (* BoolVal false, *)
                                      (* (Program [ *)
                                      (*      NotEqualExpr ( *)
                                      (*          BoolLiteral true, *)
                                      (*          BoolLiteral true)]); *)
+
                                      "16",
                                      BoolVal true ,
                                      (Program [
                                           LessExpr (
                                               IntLiteral 3,
                                               IntLiteral 5)]);
+
                                      "17",
                                      BoolVal true,
                                      (Program [
                                           LessEqualExpr (
                                               IntLiteral 3,
                                               IntLiteral 3)]);
+
                                      "18",
                                      BoolVal true,
                                      (Program [
                                           GreaterExpr (
                                               IntLiteral 5,
                                               IntLiteral 3)]);
+
                                      "19",
                                      BoolVal true,
                                      (Program [
                                           LogicOrExpr (
                                               BoolLiteral true,
                                               BoolLiteral true)]);
+
                                      "20",
                                      BoolVal true,
                                      (Program [
                                           LogicAndExpr (
                                               BoolLiteral true,
                                               BoolLiteral true)]);
+
                                      "21",
                                      IntVal 6,
                                      (Program [
@@ -145,6 +165,7 @@ let suite =
                                               (DivIntExpr (
                                                    IntLiteral 10,
                                                    IntLiteral 2)))]);
+
                                      "22",
                                      IntVal 5,
                                      (Program [
@@ -158,6 +179,7 @@ let suite =
                                               (DivIntExpr (
                                                    IntLiteral 10,
                                                    IntLiteral 2)))]);
+
                                      "23",
                                      IntVal 7,
                                      (Program [
@@ -173,6 +195,7 @@ let suite =
                                                        IntLiteral 10,
                                                        IntLiteral 2))),
                                               IntLiteral 3)]);
+
                                      "24",
                                      IntVal 6,
                                      (Program [
@@ -182,6 +205,7 @@ let suite =
                                               Some (AddIntExpr (
                                                         Id "x",
                                                         IntLiteral 3)))]);
+
                                      "25",
                                      IntVal 13,
                                      (* let x = 3 in let y = 5 in let x = 8 in x + y *)
@@ -201,6 +225,7 @@ let suite =
                                                                   AddIntExpr (
                                                                       Id "x",
                                                                       Id "y")))))))]);
+
                                      "26",
                                      IntVal 3,
                                      (Program [
@@ -209,6 +234,7 @@ let suite =
                                               IntLiteral 3,
                                               Some (
                                                   Id "x"))]);
+
                                      "27",
                                      IntVal 5,
                                      (* let func x y = x + y in func 3 2 *)
@@ -223,6 +249,7 @@ let suite =
                                                   FuncCall (
                                                       "func",
                                                       [IntLiteral 3; IntLiteral 2])))]);
+
                                      "28",
                                      IntVal 2,
                                      (* let f a b = a / b;; f 10 5 *)
@@ -237,6 +264,7 @@ let suite =
                                           FuncCall (
                                               "f",
                                               [IntLiteral 10; IntLiteral 5])]);
+
                                      "29",
                                      UnitVal,
                                      (* (); (); *)
@@ -244,6 +272,7 @@ let suite =
                                           Sequence (
                                               UnitLiteral,
                                               UnitLiteral)]);
+
                                      "30",
                                      FloatVal 0.,
                                      (* let arr = Array.make 10 0;; arr.(2) *)
@@ -257,6 +286,7 @@ let suite =
                                           ArrayGet (
                                               "arr",
                                               IntLiteral 2)]);
+
                                      "31",
                                      FloatVal 3.14,
                                      (* let arr = Array.make 10 0.;; arr.(2) <- 3.14;; arr.(2) *)
@@ -274,6 +304,7 @@ let suite =
                                           ArrayGet (
                                               "arr",
                                               IntLiteral 2)]);
+
                                      "32",
                                      UnitVal,
                                      (* let arr = Array.make 5 0. in arr.(0) <- 0. *)
@@ -288,6 +319,7 @@ let suite =
                                                       "arr",
                                                       IntLiteral 0,
                                                       FloatLiteral 0.)))]);
+
                                      "33",
                                      BoolVal false,
                                      (Program [
@@ -304,6 +336,7 @@ let suite =
                                           ArrayGet (
                                               "arr",
                                               IntLiteral 0)]);
+
                                     ]);
                 "interpreter test" >::: (List.map
                                            (fun (title,res,arg) ->
@@ -317,14 +350,17 @@ let suite =
                                             "- : int = 1",
                                             (Program [
                                                  IntLiteral 1]);
+
                                             "2",
                                             "- : float = 13.4",
                                             (Program [
                                                  FloatLiteral 13.4]);
+
                                             "3",
                                             "- : float = 3.1415",
                                             (Program [
                                                  FloatLiteral 3.1415]);
+
                                             "4",
                                             "val func : int -> int -> int = <fun>",
                                             (Program [
@@ -335,6 +371,7 @@ let suite =
                                                          Id "a",
                                                          Id "b"),
                                                      None)]);
+
                                             "5",
                                             "- : bool = true",
                                             (Program [
@@ -349,6 +386,7 @@ let suite =
                                                  ArrayNew (
                                                      "int",
                                                      IntLiteral 3)]);
+
                                            ]);
                 "lexer test" >::: (List.map
                                      (fun (title,res,arg) ->
@@ -360,6 +398,7 @@ let suite =
                                      ["1",
                                       [IntLiteral 1; Op AddInt; IntLiteral 1],
                                       "1 + 1";
+
                                       "2",
                                       [Keyword Let; Identifier "x"; Op Assign; IntLiteral 3],
                                       "let x = 3";
@@ -384,6 +423,7 @@ let suite =
                                                  [Op AddInt, IntLiteral 3;
                                                   Op SubInt, IntLiteral 2;
                                                   Op AddInt, IntLiteral 1];
+
                                                  "2",
                                                  SubFloatExpr (
                                                      SubFloatExpr (
@@ -396,6 +436,7 @@ let suite =
                                                  [Op AddFloat, FloatLiteral 2.1;
                                                   Op SubFloat, FloatLiteral 3.3;
                                                   Op SubFloat, FloatLiteral 2.1];
+
                                                  "3",
                                                  MulIntExpr (
                                                      DivIntExpr (
@@ -411,6 +452,7 @@ let suite =
                                                   Op DivInt, IntLiteral 2;
                                                   Op DivInt, IntLiteral 1;
                                                   Op MulInt, IntLiteral 0];
+
                                                  "4",
                                                  MulFloatExpr (
                                                      DivFloatExpr (
@@ -426,6 +468,7 @@ let suite =
                                                   Op DivFloat, FloatLiteral 2.3;
                                                   Op DivFloat, FloatLiteral 1.4;
                                                   Op MulFloat, FloatLiteral 0.5];
+
                                                 ]);
                 "analyze test" >::: (List.map
                                        (fun (title,res,arg) ->
@@ -482,4 +525,5 @@ let suite =
                                        ]);
                 (* "codegen test"; *)
                ]
+
 let run_test = run_test_tt_main suite
