@@ -3,6 +3,7 @@ open Ast
 open Token
 open Interpreter
 open Analyzer
+open Associate_left
 open Llvm
 
 let suite =
@@ -355,31 +356,12 @@ let suite =
                                       "2",
                                       [Keyword Let; Identifier "x"; Op Assign; IntLiteral 3],
                                       "let x = 3";
-                                     ]);                
+                                     ]);
                 (* "perser test"; *)
-                "associate left test" >::: (List.map
-                                              (fun (title,res,arg) ->
-                                               "Associate left " ^ title >::
-                                                 (fun test_ctxt ->
-                                                  todo "unimplemented";
-                                                  assert_equal
-                                                    res
-                                                    (Associate_left.associate_left arg)))
-                                              ["1",
-                                               AddIntExpr (
-                                                   AddIntExpr (
-                                                       IntLiteral 1,
-                                                       IntLiteral 2),
-                                                   IntLiteral 3),                                               
-                                               AddIntExpr (
-                                                   IntLiteral 1,
-                                                   AddIntExpr (
-                                                       IntLiteral 2,
-                                                       IntLiteral 3))]);
                 "analyze test" >::: (List.map
                                        (fun (title,res,arg) ->
                                         "analyze " ^ title >::
-                                          (fun test_ctxt -> 
+                                          (fun test_ctxt ->
                                            assert_equal
                                              res
                                              (Analyzer.analyze arg)))
@@ -401,7 +383,7 @@ let suite =
                                         "2",
                                         (Flow [
                                              Seq (
-                                                 Cond (                                                     
+                                                 Cond (
                                                      BinOp (
                                                          Term (
                                                              FloatLiteral 3.2,
