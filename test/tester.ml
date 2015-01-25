@@ -3,7 +3,6 @@ open Ast
 open Token
 open Interpreter
 open Analyzer
-open Associate_left
 open Llvm
 
 let suite =
@@ -91,10 +90,18 @@ let suite =
                                           NotEqualExpr (
                                               IntLiteral 3,
                                               IntLiteral 2)]);
-                                     (* "14", BoolVal true, *)
-                                     (* (Program [NotEqualExpr (BoolLiteral true, BoolLiteral false)]); *)
-                                     (* "15", BoolVal false, *)
-                                     (* (Program [NotEqualExpr (BoolLiteral true, BoolLiteral true)]); *)
+                                     (* "14", *)
+                                     (* BoolVal true, *)
+                                     (* (Program [ *)
+                                     (*      NotEqualExpr ( *)
+                                     (*          BoolLiteral true, *)
+                                     (*          BoolLiteral false)]); *)
+                                     (* "15", *)
+                                     (* BoolVal false, *)
+                                     (* (Program [ *)
+                                     (*      NotEqualExpr ( *)
+                                     (*          BoolLiteral true, *)
+                                     (*          BoolLiteral true)]); *)
                                      "16",
                                      BoolVal true ,
                                      (Program [
@@ -358,6 +365,68 @@ let suite =
                                       "let x = 3";
                                      ]);
                 (* "perser test"; *)
+                "left associative test" >::: (List.map
+                                                (fun (title,res,arg1,arg2) ->
+                                                 "left associative " ^ title >::
+                                                   (fun test_ctxt ->
+                                                    assert_equal
+                                                      res
+                                                      (Make_left_associative_tree.make_left_associative_tree arg1 arg2)))
+                                                ["1",
+                                                 AddIntExpr (
+                                                     SubIntExpr (
+                                                         AddIntExpr (
+                                                             IntLiteral 1,
+                                                             IntLiteral 3),
+                                                         IntLiteral 2),
+                                                     IntLiteral 1),
+                                                 IntLiteral 1,
+                                                 [Op AddInt, IntLiteral 3;
+                                                  Op SubInt, IntLiteral 2;
+                                                  Op AddInt, IntLiteral 1];
+                                                 "2",
+                                                 SubFloatExpr (
+                                                     SubFloatExpr (
+                                                         AddFloatExpr (
+                                                             FloatLiteral 3.2,
+                                                             FloatLiteral 2.1),
+                                                         FloatLiteral 3.3),
+                                                     FloatLiteral 2.1),
+                                                 FloatLiteral 3.2,
+                                                 [Op AddFloat, FloatLiteral 2.1;
+                                                  Op SubFloat, FloatLiteral 3.3;
+                                                  Op SubFloat, FloatLiteral 2.1];
+                                                 "3",
+                                                 MulIntExpr (
+                                                     DivIntExpr (
+                                                         DivIntExpr (
+                                                             MulIntExpr (
+                                                                 IntLiteral 4,
+                                                                 IntLiteral 3),
+                                                             IntLiteral 2),
+                                                         IntLiteral 1),
+                                                     IntLiteral 0),
+                                                 IntLiteral 4,
+                                                 [Op MulInt, IntLiteral 3;
+                                                  Op DivInt, IntLiteral 2;
+                                                  Op DivInt, IntLiteral 1;
+                                                  Op MulInt, IntLiteral 0];
+                                                 "4",
+                                                 MulFloatExpr (
+                                                     DivFloatExpr (
+                                                         DivFloatExpr (
+                                                             MulFloatExpr (
+                                                                 FloatLiteral 4.1,
+                                                                 FloatLiteral 3.2),
+                                                             FloatLiteral 2.3),
+                                                         FloatLiteral 1.4),
+                                                     FloatLiteral 0.5),
+                                                 FloatLiteral 4.1,
+                                                 [Op MulFloat, FloatLiteral 3.2;
+                                                  Op DivFloat, FloatLiteral 2.3;
+                                                  Op DivFloat, FloatLiteral 1.4;
+                                                  Op MulFloat, FloatLiteral 0.5];                                                 
+                                                ]);
                 "analyze test" >::: (List.map
                                        (fun (title,res,arg) ->
                                         "analyze " ^ title >::

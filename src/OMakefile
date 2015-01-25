@@ -143,7 +143,7 @@ FILES[] =
 	analyzer
 	codegen
 	interpreter
-	associate_left
+	make_left_associative_tree
 	main
 
 LIB = semicaml
