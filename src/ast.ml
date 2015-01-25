@@ -38,3 +38,5 @@ type ast =
   | ArrayAssign of string * ast * ast
   | FuncCall of string * ast list
   | Id of string
+
+  | Paren of ast
