@@ -771,6 +771,18 @@ let suite =
                                                      else fib (n - 1) + fib (n - 2);;
 
                                                   fib 10";
+
+                                                  "3",
+                                                  (Program [], []),
+                                                  ";;";
+
+                                                  "4",
+                                                  (Program [Id "a"], []),
+                                                  "a";
+
+                                                  "5",
+                                                  (Program [Id "a"], []),
+                                                  "a;;";
                                                 ]);
 
                 "analyze test" >::: (List.map
