@@ -67,12 +67,13 @@ let rec dump ?(offset=0) a =
 let rec program_rule = function
   | Op DoubleSemicolon :: tail -> (Program [], tail)
   | tokens -> begin match top_let_expr_rule tokens with
+    | (head_ast, []) -> (Program [head_ast], [])
+    | (head_ast, Op DoubleSemicolon :: []) -> (Program [head_ast], [])
     | (head_ast, Op DoubleSemicolon :: tail) -> begin match program_rule tail with
       | (Program tail_asts, tail') -> (Program (head_ast :: tail_asts), tail')
       | _                          -> failwith "you shouldn't see this message"
     end
-    | (head_ast, []) -> (Program [head_ast], [])
-    | _              -> failwith "';;' expected"
+    | _ -> failwith "';;' expected"
   end
 
 and top_let_expr_rule tokens = match tokens with
