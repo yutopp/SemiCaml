@@ -687,6 +687,22 @@ let suite =
                                                  "if true then 1 else 2"
                                                 ]);
 
+                "seq_expr_rule test" >::: (List.map
+                                                (fun (title,res,arg) ->
+                                                 "seq_expr_rule " ^ title >::
+                                                   (fun test_ctxt ->
+                                                    assert_equal
+                                                      res
+                                                      (Parser.seq_expr_rule (Lexer.lex (Lexer.char_list_of_string arg)))))
+                                                ["1",
+                                                 (IntLiteral 1, []),
+                                                 "1";
+
+                                                 "2",
+                                                 (Sequence (IntLiteral 1, IntLiteral 2), []),
+                                                 "1;2";
+                                                ]);
+
                 "decl_rule test" >::: (List.map
                                                 (fun (title,res,arg) ->
                                                  "decl_rule " ^ title >::
