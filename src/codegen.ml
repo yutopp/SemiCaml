@@ -17,7 +17,7 @@ let m_float_ty = L.pointer_type float_ty
 let m_bool_ty = L.pointer_type bool_ty
 let m_unit_ty = L.pointer_type i8_ty
 
-let unit_value = L.const_pointer_null m_unit_ty
+let unit_value = L.const_pointer_null i8_ty
 
 let closure_ty = L.struct_type context (Array.make 2 (L.pointer_type void_ty))
 
