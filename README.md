@@ -25,4 +25,8 @@ omake check
 ```
 ./semicaml
 ```
+# REPL
 
+```
+./semicaml --repl
+```
