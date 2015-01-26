@@ -128,4 +128,10 @@ extern "C"
 
         return new closure_bag_t( b );
     }
+
+    auto _semi_caml_new_unit()
+        -> holder_t*
+    {
+        return nullptr;
+    }
 }

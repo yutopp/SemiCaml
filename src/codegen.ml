@@ -17,8 +17,6 @@ let m_float_ty = L.pointer_type float_ty
 let m_bool_ty = L.pointer_type bool_ty
 let m_unit_ty = L.pointer_type i8_ty
 
-let unit_value = L.const_pointer_null i8_ty
-
 let closure_ty = L.struct_type context (Array.make 2 (L.pointer_type void_ty))
 
 type t_value =
@@ -93,6 +91,12 @@ let f_new_closure_bag =
   let func_ty = L.function_type (L.pointer_type function_bag_ty) params in
   L.declare_function "_semi_caml_new_closure_bag" func_ty s_module
 
+let f_new_unit =
+  let params = [||] in
+  let func_ty = L.function_type m_unit_ty params in
+  L.declare_function "_semi_caml_new_unit" func_ty s_module
+
+let unit_value = L.build_call f_new_unit [||] "" builder
 
 exception NotSupportedNode
 exception UnexpectedType of string
