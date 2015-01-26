@@ -545,10 +545,13 @@ let init_analyzer () =
 
   env
 
+let analyze_as_top_level env node =
+  analyze' node env 0 None None
+
 let analyze ast =
   let env = init_analyzer () in
   let attr_ast = match ast with
-      Program xs -> Flow (List.map (fun x -> analyze' x env 0 None None) xs)
+      Program xs -> Flow (List.map (fun x -> analyze_as_top_level env x) xs)
     | _ -> raise (SemanticError "some exceptions are raised")
   in
 
