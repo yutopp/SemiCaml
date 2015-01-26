@@ -752,7 +752,15 @@ let suite =
 
                                                  "2",
                                                  (FuncDecl ("mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
-                                                 "let mul(x y) = x * y in mul 1 1"
+                                                 "let mul(x y) = x * y in mul 1 1";
+
+                                                 "3",
+                                                 (VerDecl ("a", IntLiteral 0, Some (Sequence (FuncCall ("print", [Id "a"]), MulIntExpr (Id "a", IntLiteral 2)))), []),
+                                                 "let a = 0 in print a; a * 2";
+
+                                                 "4",
+                                                 (VerDecl ("a", IntLiteral 2, Some (Sequence (FuncCall ("print", [Id "a"]), VerDecl ("b", IntLiteral 3, Some (FuncCall ("print", [AddIntExpr (Id "a", Id "b")])))))), []),
+                                                 "let a = 2 in print a; let b = 3 in print (a + b)"
                                                 ]);
 
                 "top_let_expr_rule test" >::: (List.map

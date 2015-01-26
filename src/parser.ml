@@ -121,7 +121,7 @@ and ids_rule = function
   | _ as tokens -> ([], tokens)
 
 and seq_expr_rule tokens = match cond_expr_rule tokens with
-  | (ast, Op Semicolon :: tail) -> begin match seq_expr_rule tail with
+  | (ast, Op Semicolon :: tail) -> begin match let_expr_rule tail with
     | (ast', tail') -> (Sequence (ast, ast'), tail')
   end
   | result -> result
