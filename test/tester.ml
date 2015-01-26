@@ -553,6 +553,10 @@ let suite =
                                                  "4",
                                                  (FuncCall ("f", [IntLiteral 1; IntLiteral 2]), []),
                                                  "f 1 2";
+
+                                                 "5",
+                                                 (FuncCall ("f", [Id "a"; Id "b"]), []),
+                                                 "f a b";
                                                 ]);
 
                 "mul_expr_rule test" >::: (List.map
