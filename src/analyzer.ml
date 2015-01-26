@@ -534,7 +534,7 @@ let rec analyze' ast env depth ottk oenc =
 
   | _ -> raise (SemanticError "Unsupported AST")
 
-let analyze ast =
+let init_analyzer () =
   (* environment for the module *)
   let env = EModule (Hashtbl.create 10) in
   (* register intrinsic functions to the symbol table *)
@@ -543,6 +543,10 @@ let analyze ast =
   ignore (save_intrinsic_term_item env "print_float" (IntrinsicFunc [Float; Unit]));
   ignore (save_intrinsic_term_item env "print_newline" (IntrinsicFunc [Unit; Unit]));
 
+  env
+
+let analyze ast =
+  let env = init_analyzer () in
   let attr_ast = match ast with
       Program xs -> Flow (List.map (fun x -> analyze' x env 0 None None) xs)
     | _ -> raise (SemanticError "some exceptions are raised")
