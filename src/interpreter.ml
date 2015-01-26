@@ -51,11 +51,21 @@ let rec val_to_str values = match values with
        (Analyzer.to_string t)
        (rustic_val_to_str value)
   | FunVal (name,_,_,Analyzer.Func types) ->
-     let name_ = delete_num_in_str name in
-     Printf.sprintf
-       "val %s : %s = <fun>"
-       name_
-       (recursive_to_string types Analyzer.to_string " -> ")
+     begin 
+       try 
+         let name_ = delete_num_in_str name in
+         Printf.sprintf
+           "val %s : %s = <fun>"
+           name_
+           (recursive_to_string types Analyzer.to_string " -> ")
+       with
+       | Not_found ->
+          Printf.sprintf
+            "val %s : %s = <fun>"
+            name
+            (recursive_to_string types Analyzer.to_string " -> ")
+       | _ -> failwith "not allow id"
+     end
   | UnitVal -> Printf.sprintf "- : unit = ()"
   | _ -> failwith "Undefined Value"
                   
