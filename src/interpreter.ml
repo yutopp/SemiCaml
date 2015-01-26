@@ -168,7 +168,8 @@ let rec eval' input =
      eval' e2
   | FuncDecl (id,args,e1,t,_,None) ->
      let arg_ids = List.map Analyzer.get_id_of args in
-     lookup id (env_ext val_table id (FunVal (id, arg_ids, e1, t)))
+     let id_ = delete_num_in_str id in
+     lookup id_ (env_ext val_table id_ (FunVal (id_, arg_ids, e1, t)))
   | FuncDecl (id,args,e1,t,_,Some e2) ->
      let arg_ids = List.map Analyzer.get_id_of args in
      (env_ext val_table id (FunVal (id, arg_ids, e1, t)));
