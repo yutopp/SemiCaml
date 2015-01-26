@@ -5,8 +5,14 @@ let rec char_list_of_in_channel in_channel =
 
 let rec repl' () =
   print_string "# ";
-  let input = (Parser.parse (Lexer.lex (Lexer.char_list_of_string (read_line ())))) in
-  repl' (Interpreter.interpreter input)
+  try 
+    let input = (Parser.parse (Lexer.lex (Lexer.char_list_of_string (read_line ())))) in
+    repl' (Interpreter.interpreter input)
+  with
+  | _ ->
+     print_string "input error\n";
+     repl' ()
+    
         
 let repl () =
   print_string "    \\SemiCaml/";
