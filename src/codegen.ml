@@ -285,7 +285,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        (* restore ip *)
        L.position_builder ip___ builder;
 
-       let v_fp = L.build_pointercast f (L.pointer_type i8_ty) "" builder in
+       let v_fp = L.build_bitcast f (L.pointer_type i8_ty) "" builder in
        let len = L.const_int i32_ty (List.length captured_ids) in
 
        (* closure bag *)
