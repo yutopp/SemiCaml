@@ -700,7 +700,23 @@ let suite =
 
                                                  "2",
                                                  (Sequence (IntLiteral 1, IntLiteral 2), []),
-                                                 "1;2";
+                                                 "1; 2";
+
+                                                 "3",
+                                                 (Sequence (Id "a", Id "a"), []),
+                                                 "a; a";
+
+                                                 "4",
+                                                 (Sequence (AddIntExpr (IntLiteral 1, IntLiteral 1), IntLiteral 2), []),
+                                                 "1 + 1; 2";
+
+                                                 "5",
+                                                 (Sequence (FuncCall ("f", [IntLiteral 1]), IntLiteral 2), []),
+                                                 "f 1; 2";
+
+                                                 "6",
+                                                 (Sequence (FuncCall ("f", [Id "a"]), Id "b"), []),
+                                                 "f a; b";
                                                 ]);
 
                 "decl_rule test" >::: (List.map

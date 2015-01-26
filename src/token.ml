@@ -42,4 +42,5 @@ let is_first_of_prim_expr = function
   | Keyword Array -> true
   | Keyword True -> true
   | Keyword False -> true
+  | Identifier _ -> true
   | _ -> false
