@@ -17,7 +17,7 @@ let m_float_ty = L.pointer_type float_ty
 let m_bool_ty = L.pointer_type bool_ty
 let m_unit_ty = L.pointer_type i8_ty
 
-let closure_ty = L.struct_type context (Array.make 2 (L.pointer_type void_ty))
+let closure_ty = L.struct_type context (Array.make 2 (L.pointer_type i8_ty))
 
 type t_value =
     Normal of L.llvalue
@@ -87,7 +87,7 @@ let f_new_value_holder_list =
   L.declare_function "_semi_caml_new_value_holder_list" func_ty s_module
 
 let f_new_closure_bag =
-  let params = [|L.pointer_type void_ty; i32_ty|] in
+  let params = [|L.pointer_type i8_ty; i32_ty|] in
   let func_ty = L.function_type (L.pointer_type function_bag_ty) params in
   L.declare_function "_semi_caml_new_closure_bag" func_ty s_module
 
@@ -285,7 +285,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        (* restore ip *)
        L.position_builder ip___ builder;
 
-       let v_fp = L.build_pointercast f (L.pointer_type void_ty) "" builder in
+       let v_fp = L.build_pointercast f (L.pointer_type i8_ty) "" builder in
        let len = L.const_int i32_ty (List.length captured_ids) in
 
        (* closure bag *)
@@ -493,8 +493,7 @@ let compile aast =
   in
   decl_print_newline();
 
-  let params = Array.make 0 void_ty in
-  let ft = L.function_type void_ty params in
+  let ft = L.function_type void_ty [||] in
   let f = L.declare_function "_semi_caml_entry" ft s_module in
   let bb = L.append_block context "entry" f in
 
