@@ -33,7 +33,7 @@ let delete_num_in_str id =
   let dot_pos = String.index id '.' in
   let erase_num_id = String.sub id 0 dot_pos in
   erase_num_id
-                  
+
 let rec val_to_str values = match values with
   | IntVal n -> Printf.sprintf "- : int = %d" n
   | FloatVal n -> Printf.sprintf "- : float = %F" n
@@ -51,8 +51,8 @@ let rec val_to_str values = match values with
        (Analyzer.to_string t)
        (rustic_val_to_str value)
   | FunVal (name,_,_,Analyzer.Func types) ->
-     begin 
-       try 
+     begin
+       try
          let name_ = delete_num_in_str name in
          Printf.sprintf
            "val %s : %s = <fun>"
@@ -68,7 +68,7 @@ let rec val_to_str values = match values with
      end
   | UnitVal -> Printf.sprintf "- : unit = ()"
   | _ -> failwith "Undefined Value"
-                  
+
 type constant_folder = {
   int : int -> int -> bool;
   float : float -> float -> bool;
@@ -78,13 +78,13 @@ type constant_folder = {
 let val_table: (string, value) Hashtbl.t = Hashtbl.create 10
 
 let env_ext env x v = Hashtbl.add val_table x v
-                                  
+
 let lookup x env =
   try
     Hashtbl.find val_table x
   with
   | Not_found ->
-     begin 
+     begin
        try
          let x_ = delete_num_in_str x in
          Hashtbl.find val_table x_
@@ -92,13 +92,13 @@ let lookup x env =
        | Not_found -> failwith "undefined"
      end
   | _ -> failwith "undefined"
-                                
+
 let intrinsic_func =
   ignore(env_ext val_table "print_int" (IntrinsicFunVal [Int;Unit]));
   ignore(env_ext val_table "print_float" (IntrinsicFunVal [Float;Unit]));
   ignore(env_ext val_table "print_bool" (IntrinsicFunVal [Boolean;Unit]));
   ignore(env_ext val_table "print_newline" (IntrinsicFunVal [Unit;Unit]))
-        
+
 let rec eval' input =
   let intop f e1 e2 = match (eval' e1, eval' e2) with
     | (IntVal n1, IntVal n2) -> IntVal (f n1 n2)
@@ -196,7 +196,7 @@ let rec eval' input =
           eval' e1
        | IntrinsicFunVal args ->
           let evaled_args = List.map eval' call_args in
-          begin 
+          begin
             match (id, List.hd evaled_args) with
             | ("print_int", IntVal n) ->
                print_int n;

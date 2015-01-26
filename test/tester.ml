@@ -385,7 +385,7 @@ let suite =
                                             (Program [
                                                  ArrayNew (
                                                      "int",
-                                                     IntLiteral 3)]);                                            
+                                                     IntLiteral 3)]);
                                             "8",
                                             "- : unit = ()",
                                             (* let a = 1 in print_int (a + 6) *)
