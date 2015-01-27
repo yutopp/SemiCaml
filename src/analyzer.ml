@@ -340,7 +340,7 @@ let rec analyze' ast env depth ottk oenc =
          end
     end
 
-  | FuncDecl (name, params, expr, in_clause) ->
+  | FuncDecl (is_rec, name, params, expr, in_clause) ->
      begin
        let inner_depth = depth + 1 in
        let decl_param_var v_name f_env =

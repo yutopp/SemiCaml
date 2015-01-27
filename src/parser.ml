@@ -27,9 +27,9 @@ let rec dump ?(offset=0) a =
        | None -> Printf.printf "\n";
      end
 
-  | FuncDecl (name, params, expr, in_clause) ->
+  | FuncDecl (is_rec, name, params, expr, in_clause) ->
      begin
-       Printf.printf "let(func) %s " name;
+       Printf.printf "let(func) %s%s " (if is_rec then "rec " else "") name;
        List.iter (fun id -> Printf.printf "%s " id) params;
        Printf.printf "= ";
        dump ~offset:(offset+1) expr;
@@ -81,8 +81,8 @@ and top_let_expr_rule tokens = match tokens with
     | (VerDecl (id, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
       | (ast', tail') -> (VerDecl (id, ast, Some ast'), tail')
     end
-    | (FuncDecl (id, ids, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
-      | (ast', tail') -> (FuncDecl (id, ids, ast, Some ast'), tail')
+    | (FuncDecl (is_rec, id, ids, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
+      | (ast', tail') -> (FuncDecl (is_rec, id, ids, ast, Some ast'), tail')
     end
     | result -> result
   end
@@ -93,8 +93,8 @@ and let_expr_rule tokens = match tokens with
     | (VerDecl (id, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
       | (ast', tail') -> (VerDecl (id, ast, Some ast'), tail')
     end
-    | (FuncDecl (id, ids, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
-      | (ast', tail') -> (FuncDecl (id, ids, ast, Some ast'), tail')
+    | (FuncDecl (is_rec, id, ids, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
+      | (ast', tail') -> (FuncDecl (is_rec, id, ids, ast, Some ast'), tail')
     end
       | _ -> failwith "'in' expected"
   end
@@ -107,7 +107,7 @@ and decl_rule = function
   | Keyword Let :: Identifier id :: ParenOpen :: tail -> begin match ids_rule tail with
     | (ids, tail') -> begin match tail' with
       | ParenClose :: Op Assign :: tail'' -> begin match let_expr_rule tail'' with
-        | (ast, tail''') -> (FuncDecl (id, ids, ast, None), tail''')
+        | (ast, tail''') -> (FuncDecl (false, id, ids, ast, None), tail''')
       end
       | _ -> failwith "')' expected"
     end

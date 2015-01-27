@@ -240,6 +240,7 @@ let suite =
                                      (* let func x y = x + y in func 3 2 *)
                                      (Program [
                                           FuncDecl (
+                                              false,
                                               "func",
                                               ["x";"y";],
                                               AddIntExpr (
@@ -255,6 +256,7 @@ let suite =
                                      (* let f a b = a / b;; f 10 5 *)
                                      (Program [
                                           FuncDecl (
+                                              false,
                                               "f",
                                               ["a"; "b"],
                                               DivIntExpr (
@@ -365,6 +367,7 @@ let suite =
                                             "val func : int -> int -> int = <fun>",
                                             (Program [
                                                  FuncDecl (
+                                                     false,
                                                      "func",
                                                      ["a";"b"],
                                                      AddIntExpr (
@@ -760,7 +763,7 @@ let suite =
                                                  "let a = b";
 
                                                  "2",
-                                                 (FuncDecl ("mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
+                                                 (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
                                                  "let mul(x y) = x * y"
                                                 ]);
 
@@ -776,7 +779,7 @@ let suite =
                                                  "let pi = 3.14 in pi *. pi";
 
                                                  "2",
-                                                 (FuncDecl ("mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
+                                                 (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
                                                  "let mul(x y) = x * y in mul 1 1";
 
                                                  "3",
@@ -800,7 +803,7 @@ let suite =
                                                  "let pi = 3.14 in pi *. pi";
 
                                                  "2",
-                                                 (FuncDecl ("mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
+                                                 (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
                                                  "let mul(x y) = x * y in mul 1 1";
 
                                                  "3",
@@ -808,7 +811,7 @@ let suite =
                                                  "let a = b";
 
                                                  "4",
-                                                 (FuncDecl ("mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
+                                                 (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
                                                  "let mul(x y) = x * y"
                                                 ]);
 
@@ -821,7 +824,7 @@ let suite =
                                                       (Parser.program_rule (Lexer.lex (Lexer.char_list_of_string arg)))))
                                                 ["1",
                                                  (Program [
-                                                     FuncDecl ("double", ["n"], MulIntExpr (Id "n", IntLiteral 2), None);
+                                                     FuncDecl (false, "double", ["n"], MulIntExpr (Id "n", IntLiteral 2), None);
                                                      FuncCall ("double", [IntLiteral 2])
                                                  ], []),
                                                  "let double(n) = n * 2;;
@@ -829,7 +832,7 @@ let suite =
 
                                                  "2",
                                                  (Program [
-                                                      FuncDecl ("fib", ["n"],
+                                                      FuncDecl (false, "fib", ["n"],
                                                           CondExpr (EqualExpr (Id "n", IntLiteral 0), IntLiteral 0,
                                                               CondExpr (EqualExpr (Id "n", IntLiteral 1), IntLiteral 1,
                                                                   AddIntExpr (FuncCall ("fib", [SubIntExpr (Id "n", IntLiteral 1)]), FuncCall("fib", [SubIntExpr (Id "n", IntLiteral 2)])))), None);

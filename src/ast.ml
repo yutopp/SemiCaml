@@ -2,7 +2,7 @@ type ast =
     Program of ast list
 
   | VerDecl of string * ast * ast option
-  | FuncDecl of string * string list * ast * ast option
+  | FuncDecl of bool * string * string list * ast * ast option
 
   | Sequence of ast * ast
 
