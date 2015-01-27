@@ -169,7 +169,12 @@ let rec eval' input =
        | BoolVal false -> eval' e2
        | _ -> failwith "first exp is expected bool value"
      end
-  | IdTerm (id,_) -> lookup id val_table
+  | IdTerm (id,_) ->
+     begin
+       match lookup id val_table with
+       | TopVarVal (_, value, _) -> value
+       | x -> x
+     end
   | VarDecl (id,e1,t,None) ->
      let id_ = delete_num_in_str id in
      lookup id_ (env_ext val_table id_ (TopVarVal (id_, eval' e1, t)))
@@ -260,3 +265,13 @@ let interpreter' input =
 let interpreter input =
   print_string (interpreter' input);
   print_newline ()
+
+let top_level_eval input =
+  eval' input
+
+let top_level_interpreter env input =
+  match input with
+  | Program xs ->
+     print_string (val_to_str (top_level_eval (Flow (List.map (fun x -> Analyzer.analyze_as_top_level env x) xs))));
+     print_newline ()
+  | _ -> failwith "not expected input form"

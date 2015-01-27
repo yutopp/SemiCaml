@@ -3,15 +3,13 @@ let rec char_list_of_in_channel in_channel =
     let read_char = input_char in_channel in read_char :: char_list_of_in_channel in_channel
   with End_of_file -> []
 
+let env = Analyzer.init_analyzer ()
+
 let rec repl' () =
   print_string "# ";
-  try
-    let input = (Parser.parse (Lexer.lex (Lexer.char_list_of_string (read_line ())))) in
-    repl' (Interpreter.interpreter input)
-  with
-  | _ ->
-     print_string "input error\n";
-     repl' ()
+  let input = (Parser.parse (Lexer.lex (Lexer.char_list_of_string (read_line ())))) in
+  repl' (Interpreter.top_level_interpreter env input)
+
 
 let repl () =
   print_string "    \\SemiCaml/";
