@@ -233,10 +233,11 @@ and prim_expr_rule = function
   | IntLiteral value :: tail -> (IntLiteral value, tail)
   | FloatLiteral value :: tail -> (FloatLiteral value, tail)
   | Identifier id :: Op Dot :: ParenOpen :: tail -> begin match let_expr_rule tail with
-    | (index_ast, Op ArrayAssign :: tail') -> begin match let_expr_rule tail' with
+    | (index_ast, ParenClose :: Op ArrayAssign :: tail') -> begin match cond_expr_rule tail' with
       | (value_ast, tail'') -> (ArrayAssign (id, index_ast, value_ast), tail'')
     end
-    | (index_ast, tail') -> (ArrayGet (id, index_ast), tail')
+    | (index_ast, ParenClose :: tail') -> (ArrayGet (id, index_ast), tail')
+    | _ -> failwith "')' expected"
   end
   | Identifier id :: tail ->  (Id id, tail)
   | _ -> failwith "identifier expected"

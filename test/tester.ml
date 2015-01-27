@@ -538,6 +538,14 @@ let suite =
                                                  "6",
                                                  (ArrayNew ("int", AddIntExpr (IntLiteral 3, IntLiteral 1)), []),
                                                  "Array.new int 3 + 1";
+
+                                                 "7",
+                                                 (ArrayGet ("ary", Id "a"), []),
+                                                 "ary.(a)";
+
+                                                 "8",
+                                                 (ArrayAssign ("ary", Id "a", AddIntExpr (Id "b", Id "c")), []),
+                                                 "ary.(a) <- b + c";
                                                 ]);
 
                 "func_call_expr_rule test" >::: (List.map
@@ -733,7 +741,11 @@ let suite =
 
                                                  "7",
                                                  (Sequence (ArrayNew ("int", AddIntExpr (Id "a", Id "b")), FuncCall ("print", [Id "a"])), []),
-                                                 "Array.new int a + b; print a"
+                                                 "Array.new int a + b; print a";
+
+                                                 "8",
+                                                 (Sequence (ArrayAssign ("hoge", Id "a", AddIntExpr (Id "b", Id "c")), FuncCall ("print", [Id "hoge"])), []),
+                                                 "hoge.(a) <- b + c; print hoge"
                                                 ]);
 
                 "decl_rule test" >::: (List.map
