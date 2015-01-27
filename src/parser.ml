@@ -225,7 +225,7 @@ and prim_expr_rule = function
     | (ast, ParenClose :: tail') -> (ast, tail')
     | _                          -> failwith "')' expected"
   end
-  | Keyword Array :: Op Dot :: Keyword New :: Identifier id :: tail-> begin match let_expr_rule tail with
+  | Keyword Array :: Op Dot :: Keyword New :: Identifier id :: tail-> begin match cond_expr_rule tail with
     | (ast, tail') -> (ArrayNew (id, ast), tail')
   end
   | Keyword True :: tail -> (BoolLiteral true, tail)
