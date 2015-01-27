@@ -4,12 +4,15 @@ let rec char_list_of_in_channel in_channel =
   with End_of_file -> []
 
 let env = Analyzer.init_analyzer ()
-
+        
 let rec repl' () =
   print_string "# ";
   let input = (Parser.parse (Lexer.lex (Lexer.char_list_of_string (read_line ())))) in
   repl' (Interpreter.top_level_interpreter env input)
 
+let in_file_repl charlist =
+  let input = (Parser.parse (Lexer.lex charlist)) in
+  repl' (Interpreter.top_level_interpreter env input)
 
 let repl () =
   print_string "    \\SemiCaml/";
@@ -35,6 +38,17 @@ let () =
      begin
        match arg with
        | "--repl" -> repl ()
+       | _ -> failwith "invalid argument"
+     end
+  | 3 ->
+     let arg1 = Sys.argv.(1) in
+     let arg2 = Sys.argv.(2) in
+     begin
+       match (arg1, arg2) with         
+       | ("--repl", filename) ->
+          let in_channel =  open_in filename in
+          let chars = char_list_of_in_channel in_channel in
+          in_file_repl chars
        | _ -> failwith "invalid argument"
      end
   | _ -> failwith "invalid argument"
