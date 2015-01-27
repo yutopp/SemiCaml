@@ -95,9 +95,6 @@ and state_identifier tokens working_string input = match input with
          | "in"    -> state_start (Keyword In                :: tokens) input
          | "true"  -> state_start (Keyword True              :: tokens) input
          | "false" -> state_start (Keyword False             :: tokens) input
-         | "int"   -> state_start (Keyword Int               :: tokens) input
-         | "float" -> state_start (Keyword Float             :: tokens) input
-         | "bool"  -> state_start (Keyword Bool              :: tokens) input
          | _       -> state_start (Identifier working_string :: tokens) input
 
 

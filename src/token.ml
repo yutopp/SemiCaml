@@ -11,7 +11,6 @@ type opcode =
 type keyword =
   | If | Then | Else | Let | Array | New | In
   | True | False
-  | Int | Float | Bool
 
 type token =
   | ParenOpen | ParenClose

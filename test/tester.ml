@@ -434,7 +434,12 @@ let suite =
                                       "2",
                                       [Keyword Let; Identifier "x"; Op Assign; IntLiteral 3],
                                       "let x = 3";
+
+                                      "3",
+                                      [Keyword Array; Op Dot; Keyword New; Identifier "int"; IntLiteral 3],
+                                      "Array.new int 3";
                                      ]);
+
                 (* "perser test"; *)
                 "left associative test" >::: (List.map
                                                 (fun (title,res,arg1,arg2) ->
