@@ -89,9 +89,9 @@ let lookup x env =
          let x_ = delete_num_in_str x in
          Hashtbl.find val_table x_
        with
-       | Not_found -> failwith "undefined"
+       | Not_found -> failwith "undefined variable"
      end
-  | _ -> failwith "undefined"
+  | _ -> failwith "undefined variable"
 
 let intrinsic_func =
   ignore(env_ext val_table "print_int" (IntrinsicFunVal [Int;Unit]));
@@ -225,15 +225,15 @@ let rec eval' input =
        | (IntVal n, Array Int) -> ArrayVal (Array.make n (IntVal 0), Int)
        | (IntVal n, Array Float) -> ArrayVal (Array.make n (FloatVal 0.), Float)
        | (IntVal n, Array Boolean) -> ArrayVal (Array.make n (BoolVal true), Boolean)
-       | _ -> failwith "not expected type"
+       | _ -> failwith "not expected type in ArrayCreate"
      end
   | ArrayRef (id,index,t) ->
      begin
        match (eval' index) with
        | IntVal n ->
-          let arr = lookup id val_table in
+          let array = lookup id val_table in
           begin
-            match arr with
+            match array with
             | ArrayVal (arr, _) -> arr.(n)
             | TopVarVal (_,ArrayVal (arr, _),_) -> arr.(n)
             | _ -> failwith "variable is not ArrayVal"
@@ -242,9 +242,9 @@ let rec eval' input =
      end
   | ArrayAssign (id,index,new_val,_) ->
      begin
-       let arr = lookup id val_table in
+       let array = lookup id val_table in
        begin
-         match (eval' index, eval' new_val, arr) with
+         match (eval' index, eval' new_val, array) with
          | (IntVal n, new_val, ArrayVal (arr, _)) ->
             arr.(n) <- new_val;
             UnitVal
