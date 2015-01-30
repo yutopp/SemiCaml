@@ -356,7 +356,11 @@ let suite =
 
                                           "2",
                                           (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
-                                          "let mul x y = x * y"
+                                          "let mul x y = x * y";
+
+                                          "3",
+                                          (FuncDecl (true, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
+                                          "let rec mul x y = x * y";
                                          ]);
 
                 "let_expr_rule test" >::: (List.map
@@ -424,12 +428,12 @@ let suite =
 
                                              "2",
                                              (Program [
-                                                  FuncDecl (false, "fib", ["n"],
+                                                  FuncDecl (true, "fib", ["n"],
                                                             CondExpr (EqualExpr (Id "n", IntLiteral 0), IntLiteral 0,
                                                                       CondExpr (EqualExpr (Id "n", IntLiteral 1), IntLiteral 1,
                                                                                 AddIntExpr (FuncCall ("fib", [SubIntExpr (Id "n", IntLiteral 1)]), FuncCall("fib", [SubIntExpr (Id "n", IntLiteral 2)])))), None);
                                                   FuncCall ("fib", [IntLiteral 10])], []),
-                                             "let fib n =
+                                             "let rec fib n =
                                               if n == 0 then 0
                                               else if n == 1 then 1
                                               else fib (n - 1) + fib (n - 2);;
