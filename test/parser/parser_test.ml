@@ -129,6 +129,10 @@ let suite =
                                                "8",
                                                (ArrayAssign ("ary", Id "a", AddIntExpr (Id "b", Id "c")), []),
                                                "ary.(a) <- b + c";
+
+                                               "9",
+                                               (UnitLiteral, []),
+                                               "()";
                                               ]);
 
                 "func_call_expr_rule test" >::: (List.map
@@ -157,6 +161,10 @@ let suite =
                                                     "5",
                                                     (FuncCall ("f", [Id "a"; Id "b"]), []),
                                                     "f a b";
+
+                                                    "6",
+                                                    (FuncCall ("print_newline", [UnitLiteral]), []),
+                                                    "print_newline ()";
                                                    ]);
 
                 "mul_expr_rule test" >::: (List.map

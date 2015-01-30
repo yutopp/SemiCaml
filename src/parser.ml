@@ -221,6 +221,7 @@ and prim_exprs_rule tokens = match tokens with
   | _ -> ([], tokens)
 
 and prim_expr_rule = function
+  | ParenOpen :: ParenClose :: tail -> (UnitLiteral, tail)
   | ParenOpen :: tail -> begin match let_expr_rule tail with
     | (ast, ParenClose :: tail') -> (ast, tail')
     | _                          -> failwith "')' expected"
