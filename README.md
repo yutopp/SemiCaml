@@ -16,9 +16,22 @@ omake local
 ```
 
 # How to test
-after build
+after build  
+
+all test
 ```
 omake check
+```
+
+each test
+```
+omake check_parser
+```
+```
+omake check_analyzer
+```
+```
+omake check_interpreter
 ```
 
 # Usage
