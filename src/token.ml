@@ -9,7 +9,7 @@ type opcode =
   | Dot
 
 type keyword =
-  | If | Then | Else | Let | Array | New | In
+  | If | Then | Else | Let | Rec | Array | New | In
   | True | False
 
 type token =

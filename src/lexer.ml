@@ -90,6 +90,7 @@ and state_identifier tokens working_string input = match input with
          | "then"  -> state_start (Keyword Then              :: tokens) input
          | "else"  -> state_start (Keyword Else              :: tokens) input
          | "let"   -> state_start (Keyword Let               :: tokens) input
+         | "rec"   -> state_start (Keyword Rec               :: tokens) input
          | "Array" -> state_start (Keyword Array             :: tokens) input
          | "new"   -> state_start (Keyword New               :: tokens) input
          | "in"    -> state_start (Keyword In                :: tokens) input

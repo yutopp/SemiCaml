@@ -21,6 +21,10 @@ let suite =
                                       "3",
                                       [Keyword Array; Op Dot; Keyword New; Identifier "int"; IntLiteral 3],
                                       "Array.new int 3";
+
+                                      "4",
+                                      [Keyword Let; Keyword Rec; Identifier "fib"; Identifier "n"; Op Assign; Identifier "n"],
+                                      "let rec fib n = n";
                                      ]);
 
                 (* "perser test"; *)
