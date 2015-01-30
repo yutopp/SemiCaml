@@ -346,30 +346,33 @@ let rec make_llvm_ir aast ip___ = match aast with
        let cond_v = L.build_load cond_v_p "" builder in
        let cond_v_ip = L.instr_succ cond_v in
 
-       let start_bb = L.insertion_block builder in
-       let current_func = L.block_parent start_bb in
-
        (* create basic blocks *)
-       let then_bb = L.append_block context "then" current_func in
-       let else_bb = L.append_block context "else" current_func in
-       let merge_bb = L.append_block context "merge" current_func in
+       let p = match cond_v_ip with L.At_end p -> p | _ -> raise NotSupportedNode in
+       let then_bb = L.insert_block context "then" p in
+       L.move_block_after p then_bb;
+       let else_bb = L.insert_block context "else" then_bb in
+       L.move_block_after then_bb else_bb;
+       let merge_bb = L.insert_block context "merge" else_bb in
+       L.move_block_after else_bb merge_bb;
 
        (* create cond *)
        ignore (L.build_cond_br cond_v then_bb else_bb builder);
 
        (* create 'then' block *)
        L.position_at_end then_bb builder;
-       let then_v = to_ptr_val (make_llvm_ir a cond_v_ip) in
+       let f_ip = L.instr_begin then_bb in
+       let then_v = to_ptr_val (make_llvm_ir a f_ip) in
        ignore (L.build_br merge_bb builder);
 
        (* create 'else' block *)
        L.position_at_end else_bb builder;
-       let else_v = to_ptr_val (make_llvm_ir b cond_v_ip) in
+       let f_ip = L.instr_begin else_bb in
+       let else_v = to_ptr_val (make_llvm_ir b f_ip) in
        ignore (L.build_br merge_bb builder);
 
        (* create merge block *)
        L.position_at_end merge_bb builder;
-       let phi = L.build_phi [(then_v, then_bb); (else_v, else_bb)] "" builder in
+       let phi = L.build_phi [(then_v, L.instr_parent then_v); (else_v, L.instr_parent else_v)] "" builder in
        Address phi
      end
 
