@@ -421,6 +421,38 @@ let suite =
                                                      IntLiteral 3,
                                                      None)]);
                                            ]);
+                "recursion test" >::: (List.map
+                                           (fun (title,res,arg) ->
+                                            "recursion test " ^ title >::
+                                              (fun test_ctxt ->
+                                               assert_equal
+                                                 ~printer:Interpreter.rustic_val_to_str
+                                                 res
+                                                 (Interpreter.eval arg)))
+                                           ["1",
+                                            IntVal 55,
+                                            (Program [
+                                                 FuncDecl (
+                                                     false,
+                                                     "sum",
+                                                     ["x"],
+                                                     CondExpr (
+                                                         EqualExpr (
+                                                             Id "x",
+                                                             IntLiteral 1),
+                                                         IntLiteral 1,
+                                                         (AddIntExpr (
+                                                              Id "x",
+                                                              FuncCall (
+                                                                  "sum",
+                                                                  [SubIntExpr (
+                                                                       Id "x",
+                                                                       IntLiteral 1)])))),
+                                                     Some (
+                                                         FuncCall (
+                                                             "sum",
+                                                             [IntLiteral 10])))]);
+                                           ])
                ]
 
 let run_test = run_test_tt_main suite
