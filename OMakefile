@@ -32,14 +32,11 @@
 # If so, define the subdirectory targets and uncomment this section.
 #
 
-.SUBDIRS: src runtime test
+.SUBDIRS: src runtime test/interpreter test/parser test/analyzer
 
 
 clean:
 	rm -f *~ *.opt *.cmi *.cmx *.cmxa *.o *.omc *.a *.out *.s *.bc *.log *.cache semicaml libsemiruntime.a
-
-check:
-	./test/test
 
 local:
 	cp src/semicaml $(CWD)

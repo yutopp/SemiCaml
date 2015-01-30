@@ -1,0 +1,30 @@
+.PHONY: clean check check_interpreter
+
+USE_OCAMLFIND = true
+OCAMLPACKS[] =
+	oUnit
+
+if $(not $(OCAMLFIND_EXISTS))
+   eprintln(This project requires ocamlfind, but is was not found.)
+   eprintln(You need to install ocamlfind and run "omake --configure".)
+   exit 1
+
+OCAMLINCLUDES += ../../src
+
+FILES[] =
+	interpreter_test
+
+PROGRAM = interpreter_test
+
+OCAML_LIBS += ../../src/semicaml
+
+clean:
+	rm -f *~ *.opt *.cmi *.cmx *.o *.omc *.log *.cache $(PROGRAM)
+
+check:
+	./$(PROGRAM)
+
+check_interpreter:
+	./$(PROGRAM)
+
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))

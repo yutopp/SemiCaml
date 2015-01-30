@@ -1,0 +1,30 @@
+.PHONY: clean check check_parser
+
+USE_OCAMLFIND = true
+OCAMLPACKS[] =
+	oUnit
+
+if $(not $(OCAMLFIND_EXISTS))
+   eprintln(This project requires ocamlfind, but is was not found.)
+   eprintln(You need to install ocamlfind and run "omake --configure".)
+   exit 1
+
+OCAMLINCLUDES += ../../src
+
+FILES[] =
+	parser_test
+
+PROGRAM = parser_test
+
+OCAML_LIBS += ../../src/semicaml
+
+clean:
+	rm -f *~ *.opt *.cmi *.cmx *.o *.omc *.log *.cache $(PROGRAM)
+
+check:
+	./$(PROGRAM)
+
+check_parser:
+	./$(PROGRAM)
+
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
