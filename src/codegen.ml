@@ -104,7 +104,7 @@ let f_new_unit =
   let func_ty = L.function_type m_unit_ty params in
   L.declare_function "_semi_caml_new_unit" func_ty s_module
 
-let unit_value = L.build_call f_new_unit [||] "" builder
+let unit_value = L.const_pointer_null m_unit_ty
 
 exception NotSupportedNode
 exception UnexpectedType of string
@@ -129,7 +129,7 @@ let rec to_llvm_ty tk = match tk with
   | A.IntrinsicFunc params -> (*; void_ty *) raise (UnexpectedType "instfunc")
   | A.Float -> float_ty
   | A.Boolean -> bool_ty
-  | A.Unit -> void_ty
+  | A.Unit -> i8_ty
   | A.Undefined -> raise (UnexpectedType "undefined")
   | _ -> raise  (UnexpectedType "var")
 
@@ -372,7 +372,9 @@ let rec make_llvm_ir aast ip___ = match aast with
 
        (* create merge block *)
        L.position_at_end merge_bb builder;
-       let phi = L.build_phi [(then_v, L.instr_parent then_v); (else_v, L.instr_parent else_v)] "" builder in
+       let then_node = if L.is_null then_v then then_bb else L.instr_parent then_v in
+       let else_node = if L.is_null else_v then else_bb else L.instr_parent else_v in
+       let phi = L.build_phi [(then_v, then_node); (else_v, else_node)] "" builder in
        Address phi
      end
 
