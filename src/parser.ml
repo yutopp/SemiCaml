@@ -104,12 +104,12 @@ and decl_rule = function
   | Keyword Let :: Identifier id :: Op Assign :: tail -> begin match let_expr_rule tail with
     | (ast, tail') -> (VerDecl (id, ast, None), tail')
   end
-  | Keyword Let :: Identifier id :: ParenOpen :: tail -> begin match ids_rule tail with
+  | Keyword Let :: Identifier id :: tail -> begin match ids_rule tail with
     | (ids, tail') -> begin match tail' with
-      | ParenClose :: Op Assign :: tail'' -> begin match let_expr_rule tail'' with
+      | Op Assign :: tail'' -> begin match let_expr_rule tail'' with
         | (ast, tail''') -> (FuncDecl (false, id, ids, ast, None), tail''')
       end
-      | _ -> failwith "')' expected"
+      | _ -> failwith "'=' expected"
     end
   end
   | _ -> failwith "'let' expected"

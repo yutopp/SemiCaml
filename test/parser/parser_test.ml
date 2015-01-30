@@ -352,7 +352,7 @@ let suite =
 
                                           "2",
                                           (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
-                                          "let mul(x y) = x * y"
+                                          "let mul x y = x * y"
                                          ]);
 
                 "let_expr_rule test" >::: (List.map
@@ -368,7 +368,7 @@ let suite =
 
                                               "2",
                                               (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
-                                              "let mul(x y) = x * y in mul 1 1";
+                                              "let mul x y = x * y in mul 1 1";
 
                                               "3",
                                               (VerDecl ("a", IntLiteral 0, Some (Sequence (FuncCall ("print", [Id "a"]), MulIntExpr (Id "a", IntLiteral 2)))), []),
@@ -392,7 +392,7 @@ let suite =
 
                                                   "2",
                                                   (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), Some (FuncCall ("mul", [IntLiteral 1; IntLiteral 1]))), []),
-                                                  "let mul(x y) = x * y in mul 1 1";
+                                                  "let mul x y = x * y in mul 1 1";
 
                                                   "3",
                                                   (VerDecl ("a", Id "b", None), []),
@@ -400,7 +400,7 @@ let suite =
 
                                                   "4",
                                                   (FuncDecl (false, "mul", ["x"; "y"], MulIntExpr (Id "x", Id "y"), None), []),
-                                                  "let mul(x y) = x * y"
+                                                  "let mul x y = x * y"
                                                  ]);
 
                 "program_rule test" >::: (List.map
@@ -415,7 +415,7 @@ let suite =
                                                   FuncDecl (false, "double", ["n"], MulIntExpr (Id "n", IntLiteral 2), None);
                                                   FuncCall ("double", [IntLiteral 2])
                                                 ], []),
-                                             "let double(n) = n * 2;;
+                                             "let double n = n * 2;;
                                               double(2)";
 
                                              "2",
@@ -425,7 +425,7 @@ let suite =
                                                                       CondExpr (EqualExpr (Id "n", IntLiteral 1), IntLiteral 1,
                                                                                 AddIntExpr (FuncCall ("fib", [SubIntExpr (Id "n", IntLiteral 1)]), FuncCall("fib", [SubIntExpr (Id "n", IntLiteral 2)])))), None);
                                                   FuncCall ("fib", [IntLiteral 10])], []),
-                                             "let fib(n) =
+                                             "let fib n =
                                               if n == 0 then 0
                                               else if n == 1 then 1
                                               else fib (n - 1) + fib (n - 2);;
