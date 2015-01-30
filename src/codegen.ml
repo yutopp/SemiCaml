@@ -23,11 +23,19 @@ type t_value =
     Normal of L.llvalue
   | Address of L.llvalue
   | Element of L.llvalue * int
+  | TempFunction of L.llvalue * L.llvalue
   | Function of L.llvalue * int * L.lltype
   | BuiltinFunction of L.llvalue
 
 let val_table: (string, t_value) Hashtbl.t = Hashtbl.create 10
 
+let to_string tv = match tv with
+    Normal _ -> "normal"
+  | Address _ -> "address"
+  | Element _ -> "element"
+  | TempFunction _ -> "tmp function"
+  | Function _ -> "function"
+  | BuiltinFunction _ -> "BuiltinFunction"
 
 (* *)
 let ptr_to_function_ty =
@@ -123,6 +131,7 @@ let rec to_llvm_ty tk = match tk with
   | A.Boolean -> bool_ty
   | A.Unit -> void_ty
   | A.Undefined -> raise (UnexpectedType "undefined")
+  | _ -> raise  (UnexpectedType "var")
 
 let to_p_llvm_ty tk = L.pointer_type (to_llvm_ty tk)
 
@@ -132,17 +141,18 @@ let aast_to_p_llvm_ty aast = match aast with
 
 exception InvalidOp
 exception InvalidType
-exception InvalidValue
+exception InvalidValue of string
 
 
 let to_ptr_val rv = match rv with
-    Normal _ -> raise InvalidValue
+    Normal _ -> raise (InvalidValue "")
   | Address v -> v
   | Element (v, index) ->
      begin
        let p = L.const_in_bounds_gep v [|L.const_int i32_ty index|] in
        L.build_load p "" builder
      end
+  | TempFunction (f, _) -> f
   | Function (v, index, ty) -> v
   | BuiltinFunction f -> f
 
@@ -219,7 +229,7 @@ let make_managed_value tk v = match tk with
     A.Int -> L.build_call f_new_int32 [|v|] "" builder
   | A.Float -> L.build_call f_new_float [|v|] "" builder
   | A.Boolean -> L.build_call f_new_bool [|v|] "" builder
-  | _ -> raise InvalidValue
+  | _ -> raise (InvalidValue "")
 
 let rec make_llvm_ir aast ip___ = match aast with
     A.Term(ast, tk) ->
@@ -255,7 +265,6 @@ let rec make_llvm_ir aast ip___ = match aast with
        let ll_params_ty = Array.of_list ([ptr_to_vals_ty] @ params_list) in
        let ft = L.function_type (to_p_llvm_ty ret_tk) ll_params_ty in
        let f = L.declare_function id ft s_module in
-       Hashtbl.add val_table id (Normal f);
        let ll_params = L.params f in
        let f_context = ll_params.(0) in
        L.set_value_name "__context" f_context;
@@ -272,6 +281,9 @@ let rec make_llvm_ir aast ip___ = match aast with
        (* set captured value *)
        List.iter (fun (id, index) -> Hashtbl.add val_table id (Element (f_context, index))) captured_ids;
 
+       Hashtbl.add val_table id (TempFunction (f, f_context));
+
+       (* evaluate body *)
        let l_expr = to_ptr_val (make_llvm_ir expr f_ip) in
        ignore (L.build_ret l_expr builder);
 
@@ -334,30 +346,33 @@ let rec make_llvm_ir aast ip___ = match aast with
        let cond_v = L.build_load cond_v_p "" builder in
        let cond_v_ip = L.instr_succ cond_v in
 
-       let start_bb = L.insertion_block builder in
-       let current_func = L.block_parent start_bb in
-
        (* create basic blocks *)
-       let then_bb = L.append_block context "then" current_func in
-       let else_bb = L.append_block context "else" current_func in
-       let merge_bb = L.append_block context "merge" current_func in
+       let p = match cond_v_ip with L.At_end p -> p | _ -> raise NotSupportedNode in
+       let then_bb = L.insert_block context "then" p in
+       L.move_block_after p then_bb;
+       let else_bb = L.insert_block context "else" then_bb in
+       L.move_block_after then_bb else_bb;
+       let merge_bb = L.insert_block context "merge" else_bb in
+       L.move_block_after else_bb merge_bb;
 
        (* create cond *)
        ignore (L.build_cond_br cond_v then_bb else_bb builder);
 
        (* create 'then' block *)
        L.position_at_end then_bb builder;
-       let then_v = to_ptr_val (make_llvm_ir a cond_v_ip) in
+       let f_ip = L.instr_begin then_bb in
+       let then_v = to_ptr_val (make_llvm_ir a f_ip) in
        ignore (L.build_br merge_bb builder);
 
        (* create 'else' block *)
        L.position_at_end else_bb builder;
-       let else_v = to_ptr_val (make_llvm_ir b cond_v_ip) in
+       let f_ip = L.instr_begin else_bb in
+       let else_v = to_ptr_val (make_llvm_ir b f_ip) in
        ignore (L.build_br merge_bb builder);
 
        (* create merge block *)
        L.position_at_end merge_bb builder;
-       let phi = L.build_phi [(then_v, then_bb); (else_v, else_bb)] "" builder in
+       let phi = L.build_phi [(then_v, L.instr_parent then_v); (else_v, L.instr_parent else_v)] "" builder in
        Address phi
      end
 
@@ -375,7 +390,14 @@ let rec make_llvm_ir aast ip___ = match aast with
        in
 
        match rf with
-         Function (bag, index, f_ty) ->
+         TempFunction (f, context) ->
+         begin
+           (* this context may be appeared at the recursive function *)
+           let e_args = [context] @ (List.map seq args) in
+           Address (L.build_call f (Array.of_list e_args) "" builder)
+         end
+
+       | Function (bag, index, f_ty) ->
          begin
            let fpp = L.build_in_bounds_gep bag [|L.const_int i32_ty 0; L.const_int i32_ty 0|] "" builder in
            let rf = L.build_load fpp "" builder in
@@ -396,7 +418,7 @@ let rec make_llvm_ir aast ip___ = match aast with
             Address (L.build_call f (Array.of_list e_args) "" builder)
           end
 
-       | _ -> raise InvalidValue
+       | _ -> raise (InvalidValue (Printf.sprintf "%s is not function (%s)" id (to_string rf)))
      end
 
   | A.ArrayCreate (elem_num, A.Array inner_tk) ->
@@ -440,7 +462,7 @@ let rec make_llvm_ir aast ip___ = match aast with
 
   | A.IdTerm (id, tk) ->
      begin
-       Printf.printf "IdTerm\n";
+       Printf.printf "IdTerm %s\n" id;
        Hashtbl.find val_table id
      end
 

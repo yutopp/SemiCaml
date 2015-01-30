@@ -17,21 +17,53 @@ type type_kind =
   | Boolean
   | Unit
   | Undefined
+  | TypeVar of int ref
 
 let rec to_string tk = match tk with
     Int -> "int"
   | String -> "string"
   | Array inner_tk -> "array<" ^ (to_string inner_tk) ^ ">"
-  | Func px -> "function"
+  | Func px -> "function / " ^ (String.concat " -> " (List.map to_string px))
   | IntrinsicFunc params_tk -> "intrinsic function"
   | Float -> "float"
   | Boolean -> "boolean"
   | Unit -> "unit"
   | Undefined -> "!undefined"
+  | TypeVar ri -> "type." ^ (string_of_int !ri)
 
 let dump_type_kind tk =
   Printf.printf "%s" (to_string tk)
 
+
+type type_table_t = (int, type_kind) Hashtbl.t
+let type_id = ref 0
+let type_table: type_table_t = Hashtbl.create 10
+
+let find_tk_from_type_id id =
+  Hashtbl.find type_table id
+
+let update_type_val id tk =
+  Hashtbl.remove type_table id;
+  Hashtbl.add type_table id tk
+
+let create_type_var () =
+  let i = !type_id in
+  update_type_val i Undefined;
+  type_id := i + 1;
+  TypeVar (ref i)
+
+(*
+let unify_type id target tk =
+  Hashtbl.remove sym id;
+  let n = match target with
+      EItem (e, s, _, depth, st) -> EItem (e, s, tk, depth, st)
+    | ETerm (s, _, depth) -> ETerm (s, tk, depth)
+    | _ -> raise UnexpectedEnv
+  in
+  Hashtbl.add sym id n;
+  Printf.printf "NEW! %s: %s\n" id (to_string tk);
+  save_env_as_flat id n
+ *)
 
 type environment =
     EModule of symbol_table
@@ -89,18 +121,57 @@ let find_tk_from_id id =
   | ETerm (_, tk, _) -> tk
   | _ -> raise UnexpectedEnv
 
-
 let update_type sym id target tk =
+  let rewrite bef after =
+    after
+  in
   Hashtbl.remove sym id;
   let n = match target with
-      EItem (e, s, _, depth, st) -> EItem (e, s, tk, depth, st)
-    | ETerm (s, _, depth) -> ETerm (s, tk, depth)
+      EItem (e, s, btk, depth, st) -> EItem (e, s, (rewrite btk tk), depth, st)
+    | ETerm (s, btk, depth) -> ETerm (s, (rewrite btk tk), depth)
     | _ -> raise UnexpectedEnv
   in
   Hashtbl.add sym id n;
   Printf.printf "NEW! %s: %s\n" id (to_string tk);
   save_env_as_flat id n
 
+let unify ltk rtk =
+  let merge li ri =
+    let ltk = find_tk_from_type_id !li in
+    let rtk = find_tk_from_type_id !ri in
+    match (ltk, rtk) with
+      (Undefined, r) ->
+      begin
+        li := !ri; (* unify *)
+        TypeVar ri
+      end
+    | (l, Undefined) ->
+      begin
+        ri := !li; (* unify *)
+        TypeVar ri
+      end
+    | (l, r) when l = r ->
+      begin
+        ri := !li; (* unify *)
+        TypeVar ri
+      end
+    | _ -> raise UnexpectedEnv
+  in
+  let merge_tk i tk =
+    let buf_tk = find_tk_from_type_id i in
+    match buf_tk with
+      Undefined -> update_type_val i tk; tk
+    | b when b = tk -> tk
+    | _ -> raise UnexpectedEnv
+  in
+  match (ltk, rtk) with
+    (TypeVar ri, TypeVar rj) -> merge ri rj
+  | (TypeVar ri, tk) -> merge_tk !ri tk
+  | (tk, TypeVar ri) -> merge_tk !ri tk
+  | (Int, Int) -> Int
+  | (Float, Float) -> Float
+  | (Boolean, Boolean) -> Boolean
+  | (l, r) -> raise (SemanticError (Printf.sprintf "type missmatch %s <> %s" (to_string l) (to_string r)))
 
 let rec dump_env ?(offset=0) env = match env with
     EModule sym ->
@@ -151,9 +222,20 @@ let get_sym_table env = match env with
 
 let index = ref 0
 
+let make_new_id name =
+  Printf.sprintf "%s.%d" name !index
+
+let import_item parent_env name tk b_env id depth =
+  let p_sym = get_sym_table parent_env in
+  let target_sym = (get_sym_table b_env) in
+  let new_env = EItem (parent_env, id, tk, depth, target_sym) in
+  Hashtbl.add p_sym name new_env;
+  id
+
+
 let save_item parent_env name tk target_sym depth =
   let p_sym = get_sym_table parent_env in
-  let id = Printf.sprintf "%s.%d" name !index in
+  let id = make_new_id name in
   let new_env = EItem (parent_env, id, tk, depth, target_sym) in
 
   Hashtbl.add p_sym name new_env;
@@ -245,28 +327,46 @@ let get_id_of a = match a with
   | IdTerm (id, _) -> id
   | ANone -> raise (UnexpectedAttributedAST "None")
 
-let rec type_kind_of a = match a with
-    Flow _ -> raise (UnexpectedAttributedAST "Flow")
-  | Term (_, tk) -> tk
-  | BinOp (_, _, _, tk) -> tk
-  | Cond (cond, a, b) -> type_kind_of a
-  | CallFunc (_, _, tk) -> tk
-  | ArrayCreate (_, tk) -> tk
-  | ArrayRef (_, _, tk) -> tk
-  | ArrayAssign (_, _, _, tk) -> tk
-  | VarDecl (_, _, tk, None) -> tk
-  | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
-  | FuncDecl (_, _, _, tk, _, None) -> tk
-  | FuncDecl (_, _, _, tk, _, Some ia) -> type_kind_of ia
-  | Seq (lhs, rhs) -> type_kind_of rhs
-  | IdTerm (_, tk) -> tk
-  | ANone -> raise (UnexpectedAttributedAST "ANone")
+let unwrap_type_kind tk = match tk with
+    TypeVar ri ->
+    begin
+      let ref_tk = find_tk_from_type_id !ri in
+      match ref_tk with
+        Undefined -> tk
+      | _ -> ref_tk
+    end
+  | _ -> tk
 
+let rec type_kind_of a =
+  let tk = match a with
+      Flow _ -> raise (UnexpectedAttributedAST "Flow")
+    | Term (_, tk) -> tk
+    | BinOp (_, _, _, tk) -> tk
+    | Cond (cond, a, b) -> type_kind_of a
+    | CallFunc (_, _, tk) -> tk
+    | ArrayCreate (_, tk) -> tk
+    | ArrayRef (_, _, tk) -> tk
+    | ArrayAssign (_, _, _, tk) -> tk
+    | VarDecl (_, _, tk, None) -> tk
+    | VarDecl (_, _, tk, Some ia) -> type_kind_of ia
+    | FuncDecl (_, _, _, tk, _, None) -> tk
+    | FuncDecl (_, _, _, tk, _, Some ia) -> type_kind_of ia
+    | Seq (lhs, rhs) -> type_kind_of rhs
+    | IdTerm (_, tk) -> tk
+    | ANone -> raise (UnexpectedAttributedAST "ANone")
+  in
+  unwrap_type_kind tk
+
+
+let fun_ret_id id = id ^ ".return_type"
 
 let rec analyze' ast env depth ottk oenc =
   let term_check ast tk ottk = match ottk with
       (* if expected type is specified and actual type is different from expected type, it is error *)
-      Some ttk -> if tk = ttk then Term (ast, tk) else raise (SemanticError "type is not matched")
+      Some ttk -> begin match tk = (unwrap_type_kind ttk) with
+                          true -> Term (ast, tk)
+                        | _ -> raise (SemanticError (Printf.sprintf "type is not matched / %s <> %s" (to_string tk) (to_string ttk)))
+                  end
     | None -> Term (ast, tk)
   in
   let binary_op_check ast lhs rhs env op tk =
@@ -275,13 +375,12 @@ let rec analyze' ast env depth ottk oenc =
     BinOp (l, r, op, tk)
   in
   let cond_binary_op ast lhs rhs env tag =
+    Ast.dump ast;
+
     let l = analyze' lhs env depth None oenc in
     let r = analyze' rhs env depth None oenc in
-    let op = match (type_kind_of l, type_kind_of r) with
-        (Int, Int) -> make_op tag Int
-      | (Float, Float) -> make_op tag Float
-      | (_, _) -> raise (SemanticError "invalid binary operation")
-    in
+    let uni = unify (type_kind_of l) (type_kind_of r) in
+    let op = make_op tag uni in
     BinOp (l, r, op, Boolean)
   in
   let logic_binary_op ast lhs rhs env op =
@@ -344,43 +443,63 @@ let rec analyze' ast env depth ottk oenc =
      begin
        let inner_depth = depth + 1 in
        let decl_param_var v_name f_env =
-         let tk = Undefined in
+         let tk = create_type_var () in
          let id = save_term_item f_env v_name tk inner_depth in
          VarDecl (id, ANone, tk, None)
        in
-       let complete_param aast = match aast with
-           VarDecl (id, inner, tk, None) ->
-           begin
-             (* check and update types to determine types of parameters. types will be inferred by analyzing the function body. *)
-             let ptk = find_tk_from_id id in
-             match ptk with
-               Undefined -> raise (SemanticError (Printf.sprintf "type of %s cannot be determined." id))
-             | _ -> VarDecl (id, ANone, ptk, None)
-           end
+       let decl_return_type_var id f_env =
+         (* dummy variable *)
+         let tk = create_type_var () in
+         let id = save_term_item f_env (fun_ret_id id) tk inner_depth in
+         VarDecl (id, ANone, tk, None)
+       in
+       let convert_aast_to_tk aast = match aast with
+           VarDecl (id, inner, tk, None) -> unwrap_type_kind (find_tk_from_id id)
+         | _ -> raise (SemanticError "[ice]")
+       in
+       let complete_param aast new_tk = match aast with
+           VarDecl (id, inner, tk, None) -> VarDecl (id, inner, new_tk, None)
          | _ -> raise (SemanticError "[ice]")
        in
        let f_env = make_tmp_env env in
+       (* for return type *)
+       let new_id = make_new_id name in
+       let dummy_val = decl_return_type_var new_id f_env in
+       let ret_tk = type_kind_of dummy_val in
        let incomplete_param_envs = List.map (fun p -> decl_param_var p f_env) params in
+       let param_nodes = List.map (fun a -> type_kind_of a) incomplete_param_envs in
+       let func_tk = Func (param_nodes @ [ret_tk]) in
+       let pre_id = match is_rec with
+           true ->
+           begin
+             let inner_env = make_tmp_env f_env in
+             Some (save_item f_env name func_tk (get_sym_table inner_env) inner_depth)
+           end
+         | _ -> None
+       in
        let captured_envs = ref [] in
        let attr_ast = analyze' expr f_env inner_depth None (Some captured_envs) in
-       let ret_tk = type_kind_of attr_ast in
-       let param_nodes = List.map (fun a -> complete_param a) incomplete_param_envs in
+       let actual_ret_tk = type_kind_of attr_ast in
+       let unified_ret_tk = unify ret_tk actual_ret_tk in
+       let param_tks = List.map convert_aast_to_tk incomplete_param_envs in
+       let param_nodes = List.map2 complete_param incomplete_param_envs param_tks in
+       let new_func_tk = Func (param_tks @ [unified_ret_tk]) in
        let id_and_indexes = List.mapi (fun i e -> (id_of e, i)) !captured_envs in
-       let tk = Func ((List.map (fun a -> type_kind_of a) param_nodes) @ [ret_tk]) in
        match in_clause with
          Some a ->
          begin
            (* analyze 'in' clause. hide the environment, so name cannot be seen from outside *)
            let inner_env = make_tmp_env env in
-           let id = save_item inner_env name tk (get_sym_table f_env) inner_depth in
+           let id = save_item inner_env name new_func_tk (get_sym_table f_env) inner_depth in
            let c_a = analyze' a inner_env inner_depth None oenc in
-           FuncDecl (id, param_nodes, attr_ast, tk, id_and_indexes, Some c_a)
+           FuncDecl (id, param_nodes, attr_ast, new_func_tk, id_and_indexes, Some c_a)
          end
        | None ->
-          begin
-            let id = save_item env name tk (get_sym_table f_env) inner_depth in
-            FuncDecl (id, param_nodes, attr_ast, tk, id_and_indexes, None)
-          end
+          let id = match pre_id with
+              Some id -> import_item env name new_func_tk f_env id inner_depth
+            | None -> save_item env name new_func_tk (get_sym_table f_env) inner_depth
+          in
+          FuncDecl (id, param_nodes, attr_ast, new_func_tk, id_and_indexes, None)
      end
 
   | Sequence (lhs, rhs) ->
@@ -468,9 +587,9 @@ let rec analyze' ast env depth ottk oenc =
          let eval_arg i a =
            let param_tk = (List.nth params i) in
            let ea = analyze' a env depth (Some param_tk) oenc in
-           match (type_kind_of ea) = param_tk with
+           match (type_kind_of ea) = (unwrap_type_kind param_tk) with
              true -> ea
-           | _ -> raise (SemanticError (Printf.sprintf "type of index %d is mismatched" i))
+           | _ -> raise (SemanticError (Printf.sprintf "type of index %d is mismatched / %s <> %s" i (to_string (type_kind_of ea)) (to_string param_tk)))
          in
          let a_args = List.mapi eval_arg args in
          let return_ty = List.nth params (params_len - 1) in
@@ -490,7 +609,7 @@ let rec analyze' ast env depth ottk oenc =
            | ETerm (id, tk, depth) -> apply id tk
            | _ -> raise (SemanticError "[ice] invalid env kind")
          end
-       | None -> raise (SemanticError "function id was not found")
+       | None -> raise (SemanticError (Printf.sprintf "function id(%s) was not found" name))
      end
 
   | Id name ->
@@ -516,16 +635,8 @@ let rec analyze' ast env depth ottk oenc =
            match ottk with
              Some ttk ->
              begin
-               if tk = Undefined then
-                 begin
-                   (* update typeinfo to determine unsolved type *)
-                   update_type sym id e ttk;
-                   IdTerm (id, ttk)
-                 end
-               else if tk <> ttk then
-                 raise (SemanticError "type missmatch")
-               else
-                 IdTerm (id, tk)
+               let new_tk = unify tk ttk in
+               IdTerm (id, new_tk)
              end
            | None -> IdTerm (id, tk)
          end
