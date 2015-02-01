@@ -2,7 +2,7 @@ open OUnit2
 open Ast
 open Token
 
-let suite = 
+let suite =
   "suite" >::: ["lexer test" >::: (List.map
                                      (fun (title,res,arg) ->
                                       "Lexer " ^ title >::
@@ -348,7 +348,13 @@ let suite =
 
                                               "8",
                                               (Sequence (ArrayAssign ("hoge", Id "a", AddIntExpr (Id "b", Id "c")), FuncCall ("print", [Id "hoge"])), []),
-                                              "hoge.(a) <- b + c; print hoge"
+                                              "hoge.(a) <- b + c; print hoge";
+
+                                              "9",
+                                              (Sequence (FuncCall ("print_int", [IntLiteral 1]),
+                                                         Sequence (FuncCall ("print_int", [IntLiteral 2]),
+                                                                   FuncCall ("print_int", [IntLiteral 3]))), []),
+                                              "print_int 1; print_int 2; print_int 3";
                                              ]);
 
                 "decl_rule test" >::: (List.map
@@ -459,6 +465,70 @@ let suite =
                                              "5",
                                              (Program [Id "a"], []),
                                              "a;;";
+
+                                             "6",
+                                             (Program [
+                                                  FuncDecl (
+                                                          true,
+                                                          "f",
+                                                          ["n"],
+                                                          CondExpr (
+                                                              EqualExpr (
+                                                                  Id "n",
+                                                                  IntLiteral 0),
+                                                              UnitLiteral,
+                                                              FuncCall (
+                                                                  "f",
+                                                                  [SubIntExpr (
+                                                                       Id "n",
+                                                                       IntLiteral 1)])),
+                                                          None)], []),
+                                             "let rec f n = if n == 0 then () else f (n - 1);;";
+
+                                             "7",
+                                             (Program [
+                                                  FuncCall (
+                                                      "print_int",
+                                                      [Id "n"])], []),
+                                             "print_int n";
+
+                                             "8",
+                                             (Program [
+                                                Sequence (
+                                                    FuncCall (
+                                                        "print_int",
+                                                        [Id "n"]),
+                                                    FuncCall (
+                                                        "print_newline",
+                                                        [UnitLiteral]))], []),
+                                             "print_int n; print_newline ()";
+
+                                             "9",
+                                             (Program [
+                                                  FuncDecl (
+                                                      true,
+                                                      "f",
+                                                      ["n"],
+                                                      CondExpr (
+                                                          EqualExpr (
+                                                              Id "n",
+                                                              IntLiteral 0),
+                                                          UnitLiteral,
+                                                          Sequence (
+                                                              FuncCall (
+                                                                  "f",
+                                                                  [SubIntExpr (
+                                                                       Id "n",
+                                                                       IntLiteral 1)]),
+                                                              Sequence (
+                                                                  FuncCall (
+                                                                      "print_int",
+                                                                      [Id "n"]),
+                                                                  FuncCall (
+                                                                      "print_newline",
+                                                                      [UnitLiteral])))),
+                                                      None)], []),
+                                             "let rec f n = if n == 0 then () else f (n - 1); print_int n; print_newline ();;"
                                             ]);]
 
 let run_test = run_test_tt_main suite

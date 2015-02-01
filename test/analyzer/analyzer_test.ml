@@ -49,16 +49,44 @@ let suite =
                                                      UnitLiteral,
                                                      Unit))]),
                                         (Program [
-                                             Sequence (CondExpr (
-                                                           EqualExpr (
-                                                               FloatLiteral 3.2,
-                                                               FloatLiteral 3.2),
-                                                           UnitLiteral,
-                                                           UnitLiteral),
-                                                       UnitLiteral)]);
+                                             Sequence (
+                                                 CondExpr (
+                                                     EqualExpr (
+                                                         FloatLiteral 3.2,
+                                                         FloatLiteral 3.2),
+                                                     UnitLiteral,
+                                                     UnitLiteral),
+                                                 UnitLiteral)]);
+                                        "3",
+                                        (Flow [
+                                             Seq (
+                                                 Seq (
+                                                     CallFunc (
+                                                         "print_int",
+                                                         [Term (IntLiteral 1, Int)],
+                                                         Unit),
+                                                     CallFunc (
+                                                         "print_int",
+                                                         [Term (IntLiteral 2, Int)],
+                                                         Unit)),
+                                                 CallFunc (
+                                                     "print_int",
+                                                     [Term (IntLiteral 3, Int)],
+                                                     Unit))]),
+                                        (Program [
+                                             Sequence (
+                                                 Sequence (
+                                                     FuncCall (
+                                                         "print_int",
+                                                         [IntLiteral 1]),
+                                                     FuncCall (
+                                                         "print_int",
+                                                         [IntLiteral 2])),
+                                                 FuncCall (
+                                                     "print_int",
+                                                     [IntLiteral 3]))]);
                                        ]);
                 (* "codegen test"; *)
                ]
 
 let run_test = run_test_tt_main suite
-                 
