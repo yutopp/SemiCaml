@@ -310,13 +310,13 @@ let suite =
                                      (* let arr = Array.make 5 0. in arr.(0) <- 0. *)
                                      (Program [
                                           VerDecl (
-                                              "arr",
+                                              "arr2",
                                               ArrayNew (
                                                   "float",
                                                   IntLiteral 5),
                                               Some (
                                                   ArrayAssign (
-                                                      "arr",
+                                                      "arr2",
                                                       IntLiteral 0,
                                                       FloatLiteral 0.)))]);
 

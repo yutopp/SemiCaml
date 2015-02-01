@@ -89,9 +89,11 @@ let lookup x env =
        try
          Hashtbl.find val_table x_
        with
-       | Not_found -> failwith ("undefined variable " ^ x_)
+       | Not_found -> failwith ("undefined variable " ^ x)
      end
   | _ -> failwith ("Hashtbl.find other \"Not_found\" exception with" ^ x)
+
+let parent_func = ref "top_level"
 
 let intrinsic_func =
   ignore(env_ext val_table "print_int" (IntrinsicFunVal [Int;Unit]));
@@ -99,25 +101,26 @@ let intrinsic_func =
   ignore(env_ext val_table "print_bool" (IntrinsicFunVal [Boolean;Unit]));
   ignore(env_ext val_table "print_newline" (IntrinsicFunVal [Unit;Unit]))
 
-let rec eval' input =
-  let intop f e1 e2 = match (eval' e1, eval' e2) with
+let rec eval' input rec_depth =
+  let intop f e1 e2 = match (eval' e1 rec_depth, eval' e2 rec_depth) with
     | (IntVal n1, IntVal n2) -> IntVal (f n1 n2)
     | _ -> failwith "Integer value is expected"
   in
-  let floatop f e1 e2 = match (eval' e1, eval' e2) with
+  let floatop f e1 e2 = match (eval' e1 rec_depth, eval' e2 rec_depth) with
     | (FloatVal n1, FloatVal n2) -> FloatVal (f n1 n2)
     | _ -> failwith "float value is expected"
   in
-  let boolop f e1 e2 = match (eval' e1, eval' e2) with
+  let boolop f e1 e2 = match (eval' e1 rec_depth, eval' e2 rec_depth) with
     | (BoolVal b1, BoolVal b2) -> BoolVal (f b1 b2)
     | _ -> failwith "bool value is expected"
   in
-  let compop f e1 e2 = match (eval' e1, eval' e2) with
+  let compop f e1 e2 = match (eval' e1 rec_depth, eval' e2 rec_depth) with
     | (IntVal n1, IntVal n2) -> BoolVal (f.int n1 n2)
     | (FloatVal n1, FloatVal n2) -> BoolVal (f.float n1 n2)
     | (BoolVal b1, BoolVal b2) -> BoolVal (f.bool b1 b2)
     | _ -> failwith "bool value is expected"
   in
+  let add_depth_to_id id depth = id ^ "." ^ string_of_int depth in
   let eq = { int = ( = ); float = ( = ); bool = ( = ) } in
   let neq = { int = ( <> ); float = ( <> ); bool = ( <> ) } in
   let lt = { int = ( < ); float = ( < ); bool = ( < ) } in
@@ -125,11 +128,9 @@ let rec eval' input =
   let gt = { int = ( > ); float = ( > ); bool = ( > ) } in
   let gte =  { int = ( >= ); float = ( >= ); bool = ( >= ) } in
   match input with
-  | Flow [e] -> eval' e
-  | Flow (e :: rest) -> ignore (eval' e); eval' (Flow rest)
-  | Seq (e1,e2) ->
-     ignore (eval' e1);
-     eval' (Flow [e2])
+  | Flow [e] -> eval' e rec_depth
+  | Flow (e :: rest) -> ignore (eval' e rec_depth); eval' (Flow rest) rec_depth
+  | Seq (e1,e2) -> ignore (eval' e1 rec_depth); eval' (Flow [e2]) rec_depth
   | Term (e,_) ->
      begin
        match e with
@@ -143,14 +144,14 @@ let rec eval' input =
   | BinOp (e1,e2,Add Int,Int) -> intop ( + ) e1 e2
   | BinOp (e1,e2,Sub Int,Int) -> intop ( - ) e1 e2
   | BinOp (e1,e2,Mul Int,Int) -> intop ( * ) e1 e2
-  | BinOp (e1,e2,Div Int,Int) when (eval' e2 = IntVal 0) ->
+  | BinOp (e1,e2,Div Int,Int) when (eval' e2 rec_depth = IntVal 0) ->
      failwith "0 division"
   | BinOp (e1,e2,Div Int,Int) -> intop ( / ) e1 e2
 
   | BinOp (e1,e2,Add Float,Float) -> floatop ( +. ) e1 e2
   | BinOp (e1,e2,Sub Float,Float) -> floatop ( -. ) e1 e2
   | BinOp (e1,e2,Mul Float,Float) -> floatop ( *. ) e1 e2
-  | BinOp (e1,e2,Div Float,Float) when (eval' e2 = FloatVal 0.) ->
+  | BinOp (e1,e2,Div Float,Float) when (eval' e2 rec_depth = FloatVal 0.) ->
      failwith "0 Division"
   | BinOp (e1,e2,Div Float,Float) -> floatop ( /. ) e1 e2
 
@@ -166,23 +167,25 @@ let rec eval' input =
 
   | Cond (cond,e1,e2) ->
      begin
-       match (eval' cond) with
-       | BoolVal true -> eval' e1
-       | BoolVal false -> eval' e2
+       match (eval' cond rec_depth) with
+       | BoolVal true -> eval' e1 rec_depth
+       | BoolVal false -> eval' e2 rec_depth
        | _ -> failwith "first exp is expected bool value"
      end
   | IdTerm (id,_) ->
+     let id_ = add_depth_to_id id rec_depth in
      begin
-       match lookup id val_table with
+       match lookup id_ val_table with
        | TopVarVal (_, value, _) -> value
        | x -> x
      end
   | VarDecl (id,e1,t,None) ->
      let id_ = delete_num_in_str id in
-     lookup id_ (env_ext val_table id_ (TopVarVal (id_, eval' e1, t)))
+     lookup id_ (env_ext val_table id_ (TopVarVal (id_, eval' e1 rec_depth, t)))
   | VarDecl (id,e1,_,Some e2) ->
-     env_ext val_table id (eval' e1);
-     eval' e2
+     let id_ = add_depth_to_id id rec_depth in
+     env_ext val_table id_ (eval' e1 rec_depth);
+     eval' e2 rec_depth
   | FuncDecl (id,args,e1,t,_,None) ->
      let arg_ids = List.map Analyzer.get_id_of args in
      let id_ = delete_num_in_str id in
@@ -190,17 +193,35 @@ let rec eval' input =
   | FuncDecl (id,args,e1,t,_,Some e2) ->
      let arg_ids = List.map Analyzer.get_id_of args in
      (env_ext val_table id (FunVal (id, arg_ids, e1, t)));
-     eval' e2
+     eval' e2 rec_depth
   | CallFunc (id,call_args,_) ->
      let func = lookup id val_table in
-     let evaled_args = List.map eval' call_args in
+     let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in     
      begin
        match func with
        | FunVal (_,pro_args,e1,_) ->
-          ignore (List.map2 (fun x v -> env_ext val_table x v)
-                            pro_args
-                            evaled_args);
-          eval' e1
+          let recursive_flag = !parent_func = id in
+          let parent_func_tmp = !parent_func in
+          parent_func := id;
+          begin
+            match recursive_flag with
+            | true ->
+               let ex_pro_args = List.map (fun arg -> add_depth_to_id arg (rec_depth + 1)) pro_args  in
+               ignore (List.map2 (fun x v -> env_ext val_table x v)
+                                 ex_pro_args
+                                 evaled_args);
+               let result = eval' e1 (rec_depth + 1) in
+               parent_func := parent_func_tmp;
+               result
+            | false ->
+               let ex_pro_args = List.map (fun arg -> add_depth_to_id arg rec_depth) pro_args in               
+               ignore (List.map2 (fun x v -> env_ext val_table x v)
+                                 ex_pro_args
+                                 evaled_args);
+               let result = eval' e1 rec_depth in
+               parent_func := parent_func_tmp;
+               result
+          end            
        | IntrinsicFunVal _ ->
           begin
             match (id, evaled_args) with
@@ -222,7 +243,7 @@ let rec eval' input =
      end
   | ArrayCreate (size,t) ->
      begin
-       match (eval' size, t) with
+       match (eval' size rec_depth, t) with
        | (IntVal n, Array Int) -> ArrayVal (Array.make n (IntVal 0), Int)
        | (IntVal n, Array Float) -> ArrayVal (Array.make n (FloatVal 0.), Float)
        | (IntVal n, Array Boolean) -> ArrayVal (Array.make n (BoolVal true), Boolean)
@@ -230,9 +251,10 @@ let rec eval' input =
      end
   | ArrayRef (id,index,t) ->
      begin
-       match (eval' index) with
+       match (eval' index rec_depth) with
        | IntVal n ->
-          let array = lookup id val_table in
+          let id_ = add_depth_to_id id rec_depth in
+          let array = lookup id_ val_table in
           begin
             match array with
             | ArrayVal (arr, _) -> arr.(n)
@@ -243,9 +265,10 @@ let rec eval' input =
      end
   | ArrayAssign (id,index,new_val,_) ->
      begin
-       let array = lookup id val_table in
+       let id_ = add_depth_to_id id rec_depth in
+       let array = lookup id_ val_table in
        begin
-         match (eval' index, eval' new_val, array) with
+         match (eval' index rec_depth, eval' new_val rec_depth, array) with
          | (IntVal n, new_val, ArrayVal (arr, _)) ->
             arr.(n) <- new_val;
             UnitVal
@@ -258,7 +281,7 @@ let rec eval' input =
   | _ -> failwith "unknow exp"
 
 let eval input =
-  eval' (Analyzer.analyze input)
+  eval' (Analyzer.analyze input) 0
 
 let interpreter' input =
   val_to_str (eval input)
@@ -268,11 +291,14 @@ let interpreter input =
   print_newline ()
 
 let top_level_eval input =
-  eval' input
+  eval' input 0
 
 let top_level_interpreter env input =
   match input with
   | Program xs ->
-     print_string (val_to_str (top_level_eval (Flow (List.map (fun x -> Analyzer.analyze_as_top_level env x) xs))));
+     print_string (val_to_str (top_level_eval (Flow (List.map
+                                                       (fun x -> Analyzer.analyze_as_top_level env
+                                                                                               x)
+                                                       xs))));
      print_newline ()
   | _ -> failwith "not expected input form"
