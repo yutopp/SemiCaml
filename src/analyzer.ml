@@ -490,7 +490,10 @@ let rec analyze' ast env depth ottk oenc =
          begin
            (* analyze 'in' clause. hide the environment, so name cannot be seen from outside *)
            let inner_env = make_tmp_env env in
-           let id = save_item inner_env name new_func_tk (get_sym_table f_env) inner_depth in
+           let id = match pre_id with
+               Some id -> import_item inner_env name new_func_tk f_env id inner_depth
+             | None -> save_item inner_env name new_func_tk (get_sym_table f_env) inner_depth
+           in
            let c_a = analyze' a inner_env inner_depth None oenc in
            FuncDecl (id, param_nodes, attr_ast, new_func_tk, id_and_indexes, Some c_a)
          end
