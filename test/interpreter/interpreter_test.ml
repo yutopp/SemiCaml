@@ -501,6 +501,33 @@ let suite =
                                                      "pow",
                                                      [IntLiteral 3;
                                                       IntLiteral 3])]);
+                                            "4",
+                                            IntVal 27,
+                                            (* let rec pow x y = if y == 0 then 1 else x * pow x (y - 1) *)
+                                            (Program [
+                                                 FuncDecl (
+                                                     true,
+                                                     "pow",
+                                                     ["x";"y"],
+                                                     CondExpr (
+                                                         EqualExpr (
+                                                             Id "y",
+                                                             IntLiteral 0),
+                                                         IntLiteral 1,
+                                                         MulIntExpr (
+                                                             Id "x",
+                                                             (FuncCall (
+                                                                  "pow",
+                                                                  [Id "x";
+                                                                   SubIntExpr (
+                                                                       Id "y",
+                                                                       IntLiteral 1)])))),
+                                                     Some (
+                                                         FuncCall (
+                                                             "pow",
+                                                             [IntLiteral 3;
+                                                              IntLiteral 3])));
+                                               ])
                                            ]);
                ]
 
