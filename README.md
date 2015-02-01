@@ -36,10 +36,7 @@ omake check_interpreter
 
 # Usage
 ```
-./semicaml
+./semicaml <filename>
+./semicaml --repl [filename]
 ```
-# REPL
 
-```
-./semicaml --repl
-```
