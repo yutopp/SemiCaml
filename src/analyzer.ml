@@ -137,7 +137,7 @@ let update_type sym id target tk =
     | _ -> raise UnexpectedEnv
   in
   Hashtbl.add sym id n;
-  Printf.printf "NEW! %s: %s\n" id (to_string tk);
+  (*Printf.printf "NEW! %s: %s\n" id (to_string tk);*)
   save_env_as_flat id n
 
 let unify ltk rtk =
@@ -181,7 +181,7 @@ let unify ltk rtk =
 let rec dump_env ?(offset=0) env = match env with
     EModule sym ->
     begin
-      Printf.printf("module\n");
+      (*Printf.printf("module\n");*)
       dump_sym ~offset:(offset+1) sym
     end
 
@@ -380,8 +380,6 @@ let rec analyze' ast env depth ottk oenc =
     BinOp (l, r, op, tk)
   in
   let cond_binary_op ast lhs rhs env tag =
-    Ast.dump ast;
-
     let l = analyze' lhs env depth None oenc in
     let r = analyze' rhs env depth None oenc in
     let uni = unify (type_kind_of l) (type_kind_of r) in
