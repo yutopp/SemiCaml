@@ -17,35 +17,39 @@ let rec program_rule = function
 
 and top_let_expr_rule tokens = match tokens with
   | Keyword Let :: _ -> begin match decl_rule tokens with
-    | (VerDecl (id, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
+    | (VerDecl (id, ast, None), Keyword In :: tail) -> begin match expr_rule tail with
       | (ast', tail') -> (VerDecl (id, ast, Some ast'), tail')
     end
-    | (FuncDecl (is_rec, id, ids, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
+    | (FuncDecl (is_rec, id, ids, ast, None), Keyword In :: tail) -> begin match expr_rule tail with
       | (ast', tail') -> (FuncDecl (is_rec, id, ids, ast, Some ast'), tail')
     end
     | result -> result
   end
   | _ -> seq_expr_rule tokens
 
+and expr_rule tokens = match tokens with
+  | Keyword Let :: _ -> let_expr_rule tokens
+  | _ -> seq_expr_rule tokens
+
 and let_expr_rule tokens = match tokens with
   | Keyword Let :: _ -> begin match decl_rule tokens with
-    | (VerDecl (id, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
+    | (VerDecl (id, ast, None), Keyword In :: tail) -> begin match expr_rule tail with
       | (ast', tail') -> (VerDecl (id, ast, Some ast'), tail')
     end
-    | (FuncDecl (is_rec, id, ids, ast, None), Keyword In :: tail) -> begin match let_expr_rule tail with
+    | (FuncDecl (is_rec, id, ids, ast, None), Keyword In :: tail) -> begin match expr_rule tail with
       | (ast', tail') -> (FuncDecl (is_rec, id, ids, ast, Some ast'), tail')
     end
       | _ -> failwith "'in' expected"
   end
-  | _ -> seq_expr_rule tokens
+  | _ -> cond_expr_rule tokens
 
 and decl_rule = function
-  | Keyword Let :: Identifier id :: Op Assign :: tail -> begin match let_expr_rule tail with
+  | Keyword Let :: Identifier id :: Op Assign :: tail -> begin match expr_rule tail with
     | (ast, tail') -> (VerDecl (id, ast, None), tail')
   end
   | Keyword Let :: Keyword Rec :: Identifier id :: tail -> begin match ids_rule tail with
     | (ids, tail') -> begin match tail' with
-      | Op Assign :: tail'' -> begin match let_expr_rule tail'' with
+      | Op Assign :: tail'' -> begin match expr_rule tail'' with
         | (ast, tail''') -> (FuncDecl (true, id, ids, ast, None), tail''')
       end
       | _ -> failwith "'=' expected"
@@ -53,7 +57,7 @@ and decl_rule = function
   end
   | Keyword Let :: Identifier id :: tail -> begin match ids_rule tail with
     | (ids, tail') -> begin match tail' with
-      | Op Assign :: tail'' -> begin match let_expr_rule tail'' with
+      | Op Assign :: tail'' -> begin match expr_rule tail'' with
         | (ast, tail''') -> (FuncDecl (false, id, ids, ast, None), tail''')
       end
       | _ -> failwith "'=' expected"
@@ -68,14 +72,14 @@ and ids_rule = function
   | _ as tokens -> ([], tokens)
 
 and seq_expr_rule tokens = match cond_expr_rule tokens with
-  | (ast, Op Semicolon :: tail) -> begin match let_expr_rule tail with
+  | (ast, Op Semicolon :: tail) -> begin match expr_rule tail with
     | (ast', tail') -> (Sequence (ast, ast'), tail')
   end
   | result -> result
 
 and cond_expr_rule tokens = match tokens with
-  | Keyword If :: tail -> begin match let_expr_rule tail with
-    | (cond_ast, Keyword Then :: tail') -> begin match let_expr_rule tail' with
+  | Keyword If :: tail -> begin match expr_rule tail with
+    | (cond_ast, Keyword Then :: tail') -> begin match expr_rule tail' with
       | (ok_ast, Keyword Else :: tail'') -> begin match let_expr_rule tail'' with
         | (ng_ast, tail''') -> (CondExpr (cond_ast, ok_ast, ng_ast), tail''')
       end
@@ -169,7 +173,7 @@ and prim_exprs_rule tokens = match tokens with
 
 and prim_expr_rule = function
   | ParenOpen :: ParenClose :: tail -> (UnitLiteral, tail)
-  | ParenOpen :: tail -> begin match let_expr_rule tail with
+  | ParenOpen :: tail -> begin match expr_rule tail with
     | (ast, ParenClose :: tail') -> (ast, tail')
     | _                          -> failwith "')' expected"
   end
@@ -180,7 +184,7 @@ and prim_expr_rule = function
   | Keyword False :: tail -> (BoolLiteral false, tail)
   | IntLiteral value :: tail -> (IntLiteral value, tail)
   | FloatLiteral value :: tail -> (FloatLiteral value, tail)
-  | Identifier id :: Op Dot :: ParenOpen :: tail -> begin match let_expr_rule tail with
+  | Identifier id :: Op Dot :: ParenOpen :: tail -> begin match expr_rule tail with
     | (index_ast, ParenClose :: Op ArrayAssign :: tail') -> begin match cond_expr_rule tail' with
       | (value_ast, tail'') -> (ArrayAssign (id, index_ast, value_ast), tail'')
     end

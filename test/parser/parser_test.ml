@@ -308,7 +308,11 @@ let suite =
 
                                                "2",
                                                (CondExpr (BoolLiteral true, IntLiteral 1, IntLiteral 2), []),
-                                               "if true then 1 else 2"
+                                               "if true then 1 else 2";
+
+                                               "3",
+                                               (CondExpr (UnitLiteral, UnitLiteral, VerDecl ("a", UnitLiteral, Some UnitLiteral)), []),
+                                               "if () then () else let a = () in ()";
                                               ]);
 
                 "seq_expr_rule test" >::: (List.map
@@ -355,6 +359,10 @@ let suite =
                                                          Sequence (FuncCall ("print_int", [IntLiteral 2]),
                                                                    FuncCall ("print_int", [IntLiteral 3]))), []),
                                               "print_int 1; print_int 2; print_int 3";
+
+                                              "10",
+                                              (Sequence (CondExpr (UnitLiteral, UnitLiteral, UnitLiteral), UnitLiteral), []),
+                                              "if () then () else (); ()";
                                              ]);
 
                 "decl_rule test" >::: (List.map
