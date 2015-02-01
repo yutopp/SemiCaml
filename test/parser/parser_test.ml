@@ -25,6 +25,14 @@ let suite =
                                       "4",
                                       [Keyword Let; Keyword Rec; Identifier "fib"; Identifier "n"; Op Assign; Identifier "n"],
                                       "let rec fib n = n";
+
+                                      "5",
+                                      [],
+                                      "(* comment *)";
+
+                                      "6",
+                                      [Identifier "hoge"; Identifier "piyo"],
+                                      "hoge(* comment *)piyo";
                                      ]);
 
                 (* "perser test"; *)

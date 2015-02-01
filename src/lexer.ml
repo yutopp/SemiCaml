@@ -34,6 +34,8 @@ let is_digit = function
 let rec state_start tokens input = match input with
   | head :: tail when is_whitespace head -> state_start tokens tail
 
+  | '(' :: '*' :: tail -> state_comment tokens tail
+
   | '(' :: tail -> state_start (ParenOpen :: tokens) tail
   | ')' :: tail -> state_start (ParenClose :: tokens) tail
 
@@ -98,5 +100,9 @@ and state_identifier tokens working_string input = match input with
          | "false" -> state_start (Keyword False             :: tokens) input
          | _       -> state_start (Identifier working_string :: tokens) input
 
+and state_comment tokens = function
+  | '*' :: ')' :: tail -> state_start tokens tail
+  | _ :: tail -> state_comment tokens tail
+  | _ -> failwith "'*)' expected"
 
 let lex = state_start []
