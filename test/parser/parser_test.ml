@@ -509,34 +509,7 @@ let suite =
                                                     FuncCall (
                                                         "print_newline",
                                                         [UnitLiteral]))], []),
-                                             "print_int n; print_newline ()";
-
-                                             "9",
-                                             (Program [
-                                                  FuncDecl (
-                                                      true,
-                                                      "f",
-                                                      ["n"],
-                                                      CondExpr (
-                                                          EqualExpr (
-                                                              Id "n",
-                                                              IntLiteral 0),
-                                                          UnitLiteral,
-                                                          Sequence (
-                                                              FuncCall (
-                                                                  "f",
-                                                                  [SubIntExpr (
-                                                                       Id "n",
-                                                                       IntLiteral 1)]),
-                                                              Sequence (
-                                                                  FuncCall (
-                                                                      "print_int",
-                                                                      [Id "n"]),
-                                                                  FuncCall (
-                                                                      "print_newline",
-                                                                      [UnitLiteral])))),
-                                                      None)], []),
-                                             "let rec f n = if n == 0 then () else f (n - 1); print_int n; print_newline ();;"
+                                             "print_int n; print_newline ()";                                               
                                             ]);]
 
 let run_test = run_test_tt_main suite
