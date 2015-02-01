@@ -80,19 +80,19 @@ let suite =
                                               IntLiteral 3,
                                               IntLiteral 3)]);
 
-                                     (* "11", *)
-                                     (* BoolVal false, *)
-                                     (* (Program [ *)
-                                     (*      EqualExpr ( *)
-                                     (*          BoolLiteral true, *)
-                                     (*          BoolLiteral false)]); *)
+                                     "11",
+                                     BoolVal false,
+                                     (Program [
+                                          EqualExpr (
+                                              BoolLiteral true,
+                                              BoolLiteral false)]);
 
-                                     (* "12", *)
-                                     (* BoolVal true, *)
-                                     (* (Program [ *)
-                                     (*      EqualExpr ( *)
-                                     (*          BoolLiteral true, *)
-                                     (*          BoolLiteral true)]); *)
+                                     "12",
+                                     BoolVal true,
+                                     (Program [
+                                          EqualExpr (
+                                              BoolLiteral true,
+                                              BoolLiteral true)]);
 
                                      "13",
                                      BoolVal true,
@@ -101,19 +101,19 @@ let suite =
                                               IntLiteral 3,
                                               IntLiteral 2)]);
 
-                                     (* "14", *)
-                                     (* BoolVal true, *)
-                                     (* (Program [ *)
-                                     (*      NotEqualExpr ( *)
-                                     (*          BoolLiteral true, *)
-                                     (*          BoolLiteral false)]); *)
+                                     "14",
+                                     BoolVal true,
+                                     (Program [
+                                          NotEqualExpr (
+                                              BoolLiteral true,
+                                              BoolLiteral false)]);
 
-                                     (* "15", *)
-                                     (* BoolVal false, *)
-                                     (* (Program [ *)
-                                     (*      NotEqualExpr ( *)
-                                     (*          BoolLiteral true, *)
-                                     (*          BoolLiteral true)]); *)
+                                     "15",
+                                     BoolVal false,
+                                     (Program [
+                                          NotEqualExpr (
+                                              BoolLiteral true,
+                                              BoolLiteral true)]);
 
                                      "16",
                                      BoolVal true ,
@@ -430,11 +430,11 @@ let suite =
                                                  res
                                                  (Interpreter.eval arg)))
                                            ["1",
-                                            IntVal 55,
+                                            IntVal 45,
                                             (Program [
                                                  FuncDecl (
-                                                     false,
-                                                     "sum",
+                                                     true,
+                                                     "sum1",
                                                      ["x"],
                                                      CondExpr (
                                                          EqualExpr (
@@ -444,15 +444,64 @@ let suite =
                                                          (AddIntExpr (
                                                               Id "x",
                                                               FuncCall (
-                                                                  "sum",
+                                                                  "sum1",
                                                                   [SubIntExpr (
                                                                        Id "x",
                                                                        IntLiteral 1)])))),
                                                      Some (
                                                          FuncCall (
-                                                             "sum",
-                                                             [IntLiteral 10])))]);
-                                           ])
+                                                             "sum1",
+                                                             [IntLiteral 9])))]);
+                                            "2",
+                                            IntVal 55,
+                                            (Program [
+                                                 FuncDecl (
+                                                     true,
+                                                     "sum2",
+                                                     ["x"],
+                                                     CondExpr (
+                                                         EqualExpr (
+                                                             Id "x",
+                                                             IntLiteral 1),
+                                                         IntLiteral 1,
+                                                         (AddIntExpr (
+                                                              Id "x",
+                                                              FuncCall (
+                                                                  "sum2",
+                                                                  [SubIntExpr (
+                                                                       Id "x",
+                                                                       IntLiteral 1)])))),
+                                                     None);
+                                                 FuncCall (
+                                                     "sum2",
+                                                     [IntLiteral 10])]);
+                                            "3",
+                                            IntVal 27,
+                                            (* let rec pow x y = if y == 0 then 1 else x * pow x (y - 1) *)
+                                            (Program [
+                                                 FuncDecl (
+                                                     true,
+                                                     "pow",
+                                                     ["x";"y"],
+                                                     CondExpr (
+                                                         EqualExpr (
+                                                             Id "y",
+                                                             IntLiteral 0),
+                                                         IntLiteral 1,
+                                                         MulIntExpr (
+                                                             Id "x",
+                                                             (FuncCall (
+                                                                  "pow",
+                                                                  [Id "x";
+                                                                   SubIntExpr (
+                                                                       Id "y",
+                                                                       IntLiteral 1)])))),
+                                                     None);
+                                                 FuncCall (
+                                                     "pow",
+                                                     [IntLiteral 3;
+                                                      IntLiteral 3])]);
+                                           ]);
                ]
 
 let run_test = run_test_tt_main suite
