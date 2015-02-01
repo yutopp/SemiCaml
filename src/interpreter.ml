@@ -200,28 +200,22 @@ let rec eval' input rec_depth =
      begin
        match func with
        | FunVal (_,pro_args,e1,_) ->
-          let recursive_flag = !parent_func = id in
+          let recursive_add =
+            if !parent_func = id
+            then 1
+            else 0
+          in
           let parent_func_tmp = !parent_func in
           parent_func := id;
-          begin
-            match recursive_flag with
-            | true ->
-               let ex_pro_args = List.map (fun arg -> add_depth_to_id arg (rec_depth + 1)) pro_args  in
-               ignore (List.map2 (fun x v -> env_ext val_table x v)
-                                 ex_pro_args
-                                 evaled_args);
-               let result = eval' e1 (rec_depth + 1) in
-               parent_func := parent_func_tmp;
-               result
-            | false ->
-               let ex_pro_args = List.map (fun arg -> add_depth_to_id arg rec_depth) pro_args in               
-               ignore (List.map2 (fun x v -> env_ext val_table x v)
-                                 ex_pro_args
-                                 evaled_args);
-               let result = eval' e1 rec_depth in
-               parent_func := parent_func_tmp;
-               result
-          end            
+          let ex_pro_args = List.map (fun arg -> add_depth_to_id
+                                                   arg
+                                                   (rec_depth + recursive_add)) pro_args  in
+          ignore (List.map2 (fun x v -> env_ext val_table x v)
+                            ex_pro_args
+                            evaled_args);
+          let result = eval' e1 (rec_depth + recursive_add) in
+          parent_func := parent_func_tmp;
+          result
        | IntrinsicFunVal _ ->
           begin
             match (id, evaled_args) with
