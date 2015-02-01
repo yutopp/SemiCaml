@@ -85,13 +85,13 @@ let lookup x env =
   with
   | Not_found ->
      begin
+       let x_ = delete_num_in_str x in
        try
-         let x_ = delete_num_in_str x in
          Hashtbl.find val_table x_
        with
-       | Not_found -> failwith "undefined variable"
+       | Not_found -> failwith ("undefined variable " ^ x_)
      end
-  | _ -> failwith "undefined variable"
+  | _ -> failwith ("Hashtbl.find other \"Not_found\" exception with" ^ x)
 
 let intrinsic_func =
   ignore(env_ext val_table "print_int" (IntrinsicFunVal [Int;Unit]));
@@ -127,7 +127,7 @@ let rec eval' input =
   match input with
   | Flow [e] -> eval' e
   | Flow (e :: rest) -> ignore (eval' e); eval' (Flow rest)
-  | Seq (e1,e2) -> ignore(eval' e1); eval' e2
+  | Seq (e1,e2) -> ignore (eval' e1); eval' (Flow [e2])
   | Term (e,_) ->
      begin
        match e with
@@ -192,30 +192,29 @@ let rec eval' input =
   | CallFunc (id,call_args,_) ->
      let func = lookup id val_table in
      begin
+       let evaled_args = List.map eval' call_args in
        match func with
        | FunVal (_,pro_args,e1,_) ->
-          let evaled_args = List.map eval' call_args in
           ignore (List.map2 (fun x v -> env_ext val_table x v)
                             pro_args
                             evaled_args);
           eval' e1
-       | IntrinsicFunVal args ->
-          let evaled_args = List.map eval' call_args in
+       | IntrinsicFunVal _ ->
           begin
-            match (id, List.hd evaled_args) with
-            | ("print_int", IntVal n) ->
+            match (id, evaled_args) with
+            | ("print_int", [IntVal n]) ->
                print_int n;
                UnitVal
-            | ("print_float", FloatVal r) ->
+            | ("print_float", [FloatVal r]) ->
                print_float r;
                UnitVal
-            | ("print_bool", BoolVal b) ->
+            | ("print_bool", [BoolVal b]) ->
                Printf.printf "%b" b;
                UnitVal
-            | ("print_newline", UnitVal) ->
+            | ("print_newline", [UnitVal]) ->
                print_newline ();
                UnitVal
-            | _ -> failwith "this function expected int"
+            | _ -> failwith "not march args type"
           end
        | _ -> failwith "func value is expected"
      end
