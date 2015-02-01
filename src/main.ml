@@ -8,7 +8,13 @@ let analyzer = Analyzer.create_analyzer ()
 let rec repl' () =
   print_string "# ";
   let input = (Parser.parse (Lexer.lex (Lexer.char_list_of_string (read_line ())))) in
-  repl' (Interpreter.top_level_interpreter analyzer input)
+  try
+    repl' (Interpreter.top_level_interpreter analyzer input)
+  with
+  | ext ->
+     print_string (Printexc.to_string ext);
+     print_newline ();
+     repl' ()
 
 let in_file_repl charlist =
   let input = (Parser.parse (Lexer.lex charlist)) in
