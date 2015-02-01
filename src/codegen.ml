@@ -326,8 +326,11 @@ let rec make_llvm_ir aast ip___ = match aast with
        in
        List.iter set_captured_value captured_id_tks;
 
+       (* gep is needed to make this value as last evaluated value in this function *)
+       let inner_bag = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0|] "" builder in
+       let func = (Function (inner_bag, 0, ft)) in
+
        (* update value of id *)
-       let func = (Function (cl_bag, 0, ft)) in
        Hashtbl.add val_table id func;
 
        (**)
@@ -396,8 +399,10 @@ let rec make_llvm_ir aast ip___ = match aast with
   | A.CallFunc (id, args, tk) ->
      begin
        Printf.printf "CallFunc %s\n" id;
-       let rf = make_llvm_ir (A.IdTerm (id, A.Undefined)) ip___ in
-       let c_ip = ref (L.instr_succ (to_ptr_val rf)) in
+       (* TODO: fix it to use ID *)
+       let rf = Hashtbl.find val_table id in
+
+       let c_ip = ref ip___ in
        let seq a =
          let v = to_ptr_val (make_llvm_ir a !c_ip) in
          let v_ip = L.instr_succ v in
