@@ -78,9 +78,14 @@ let depth_of env = match env with
   | EItem (_, _, _, d, _) -> d
   | ETerm (_, _, d) -> d
 
-let id_of env = match env with
+let env_id_of env = match env with
     EItem (_, id, _, _, _) -> id
   | ETerm (id, _, _) -> id
+  | _ -> raise UnexpectedEnvKind
+
+let env_type_kind_of env = match env with
+    EItem (_, _, tk, _, _) -> tk
+  | ETerm (_, tk, _) -> tk
   | _ -> raise UnexpectedEnvKind
 
 let rec lookup env name =
@@ -306,7 +311,7 @@ type a_ast =
   | ArrayRef of string * a_ast * type_kind
   | ArrayAssign of string * a_ast * a_ast * type_kind
   | VarDecl of string * a_ast * type_kind * a_ast option
-  | FuncDecl of string * a_ast list * a_ast * type_kind * (string * int) list * a_ast option
+  | FuncDecl of string * a_ast list * a_ast * type_kind * (string * type_kind * int) list * a_ast option
   | Seq of a_ast * a_ast
   | IdTerm of string * type_kind
   | ANone
@@ -484,7 +489,9 @@ let rec analyze' ast env depth ottk oenc =
        let param_tks = List.map convert_aast_to_tk incomplete_param_envs in
        let param_nodes = List.map2 complete_param incomplete_param_envs param_tks in
        let new_func_tk = Func (param_tks @ [unified_ret_tk]) in
-       let id_and_indexes = List.mapi (fun i e -> (id_of e, i)) !captured_envs in
+       let env_id_tk_and_indexes =
+         List.mapi (fun i e -> (env_id_of e, env_type_kind_of e, i)) !captured_envs
+       in
        match in_clause with
          Some a ->
          begin
@@ -495,14 +502,14 @@ let rec analyze' ast env depth ottk oenc =
              | None -> save_item inner_env name new_func_tk (get_sym_table f_env) inner_depth
            in
            let c_a = analyze' a inner_env inner_depth None oenc in
-           FuncDecl (id, param_nodes, attr_ast, new_func_tk, id_and_indexes, Some c_a)
+           FuncDecl (id, param_nodes, attr_ast, new_func_tk, env_id_tk_and_indexes, Some c_a)
          end
        | None ->
           let id = match pre_id with
               Some id -> import_item env name new_func_tk f_env id inner_depth
             | None -> save_item env name new_func_tk (get_sym_table f_env) inner_depth
           in
-          FuncDecl (id, param_nodes, attr_ast, new_func_tk, id_and_indexes, None)
+          FuncDecl (id, param_nodes, attr_ast, new_func_tk, env_id_tk_and_indexes, None)
      end
 
   | Sequence (lhs, rhs) ->
@@ -582,7 +589,7 @@ let rec analyze' ast env depth ottk oenc =
 
   | FuncCall (name, args) ->
      begin
-       let call_function e id params =
+       let call_function id params =
          let params_len = List.length params in
          if List.length params < 1 then raise (SemanticError "Function must have at least 1 param");
          if List.length args <> (params_len - 1) then raise (SemanticError "langth of args and params is different");
@@ -598,21 +605,15 @@ let rec analyze' ast env depth ottk oenc =
          let return_ty = List.nth params (params_len - 1) in
          CallFunc (id, a_args, return_ty)
        in
-       let oe = lookup env name in
-       match oe with
-         Some (e, _) ->
-         begin
-           let apply id tk = match tk with
-               Func params -> call_function e id params
-             | IntrinsicFunc params -> call_function e id params
-             | _ -> raise (SemanticError "function is not callable")
-           in
-           match e with
-             EItem (_, id, tk, depth, _) -> apply id tk
-           | ETerm (id, tk, depth) -> apply id tk
-           | _ -> raise (SemanticError "[ice] invalid env kind")
-         end
-       | None -> raise (SemanticError (Printf.sprintf "function id(%s) was not found" name))
+       let apply id tk = match tk with
+           Func params -> call_function id params
+         | IntrinsicFunc params -> call_function id params
+         | _ -> raise (SemanticError "function is not callable")
+       in
+       let f = analyze' (Id name) env depth None oenc in
+       match f with
+         IdTerm (id, tk) -> apply id tk
+       | _ -> raise (SemanticError "function is not callable")
      end
 
   | Id name ->
@@ -648,6 +649,8 @@ let rec analyze' ast env depth ottk oenc =
 
   | _ -> raise (SemanticError "Unsupported AST")
 
+type analyzer = environment * int ref
+
 let init_analyzer () =
   (* environment for the module *)
   let env = EModule (Hashtbl.create 10) in
@@ -657,19 +660,23 @@ let init_analyzer () =
   ignore (save_intrinsic_term_item env "print_float" (IntrinsicFunc [Float; Unit]));
   ignore (save_intrinsic_term_item env "print_newline" (IntrinsicFunc [Unit; Unit]));
 
-  env
+  (env, ref 1)
 
-let analyze_as_top_level env node =
-  analyze' node env 0 None None
+let analyze_as_top_level analyzer node =
+  let env, rdepth = analyzer in
+  let depth = !rdepth in
+  rdepth := !rdepth + 1;
+  analyze' node env depth None None
 
 let analyze ast =
-  let env = init_analyzer () in
+  let anayzer = init_analyzer () in
   let attr_ast = match ast with
-      Program xs -> Flow (List.map (fun x -> analyze_as_top_level env x) xs)
+      Program xs -> Flow (List.map (fun x -> analyze_as_top_level anayzer x) xs)
     | _ -> raise (SemanticError "some exceptions are raised")
   in
 
   (* debug *)
+  let env, depth = anayzer in
   dump_env env;
 
   (* result *)
