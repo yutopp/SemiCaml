@@ -651,7 +651,7 @@ let rec analyze' ast env depth ottk oenc =
 
 type analyzer = environment * int ref
 
-let init_analyzer () =
+let create_analyzer () =
   (* environment for the module *)
   let env = EModule (Hashtbl.create 10) in
   (* register intrinsic functions to the symbol table *)
@@ -669,7 +669,7 @@ let analyze_as_top_level analyzer node =
   analyze' node env depth None None
 
 let analyze ast =
-  let anayzer = init_analyzer () in
+  let anayzer = create_analyzer () in
   let attr_ast = match ast with
       Program xs -> Flow (List.map (fun x -> analyze_as_top_level anayzer x) xs)
     | _ -> raise (SemanticError "some exceptions are raised")
