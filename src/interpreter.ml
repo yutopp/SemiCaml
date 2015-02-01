@@ -127,7 +127,9 @@ let rec eval' input =
   match input with
   | Flow [e] -> eval' e
   | Flow (e :: rest) -> ignore (eval' e); eval' (Flow rest)
-  | Seq (e1,e2) -> ignore (eval' e1); eval' (Flow [e2])
+  | Seq (e1,e2) ->
+     ignore (eval' e1);
+     eval' (Flow [e2])
   | Term (e,_) ->
      begin
        match e with
@@ -191,8 +193,8 @@ let rec eval' input =
      eval' e2
   | CallFunc (id,call_args,_) ->
      let func = lookup id val_table in
+     let evaled_args = List.map eval' call_args in
      begin
-       let evaled_args = List.map eval' call_args in
        match func with
        | FunVal (_,pro_args,e1,_) ->
           ignore (List.map2 (fun x v -> env_ext val_table x v)
