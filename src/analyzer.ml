@@ -19,11 +19,12 @@ type type_kind =
   | Undefined
   | TypeVar of int ref
 
+
 let rec to_string tk = match tk with
     Int -> "int"
   | String -> "string"
   | Array inner_tk -> "array<" ^ (to_string inner_tk) ^ ">"
-  | Func px -> "function / " ^ (String.concat " -> " (List.map to_string px))
+  | Func px -> "fun(" ^ (String.concat " -> " (List.map to_string px)) ^ ")"
   | IntrinsicFunc params_tk -> "intrinsic function"
   | Float -> "float"
   | Boolean -> "boolean"
@@ -135,16 +136,19 @@ let unify ltk rtk =
     match (ltk, rtk) with
       (Undefined, r) ->
       begin
+        Printf.printf "=> %d is %d\n" (!li) (!ri);
         li := !ri; (* unify *)
         TypeVar ri
       end
     | (l, Undefined) ->
       begin
+        Printf.printf "=> %d is %d\n" (!ri) (!li);
         ri := !li; (* unify *)
         TypeVar ri
       end
     | (l, r) when l = r ->
       begin
+        Printf.printf "=> %d is %d\n" (!ri) (!li);
         ri := !li; (* unify *)
         TypeVar ri
       end
@@ -153,7 +157,12 @@ let unify ltk rtk =
   let merge_tk i tk =
     let buf_tk = find_tk_from_type_id i in
     match buf_tk with
-      Undefined -> update_type_val i tk; tk
+      Undefined ->
+      begin
+        Printf.printf "=> %i is %s\n" i (to_string tk);
+        update_type_val i tk;
+        tk
+      end
     | b when b = tk -> tk
     | _ -> raise UnexpectedEnv
   in
@@ -437,6 +446,7 @@ let rec analyze' ast env depth ottk oenc =
 
   | FuncDecl (is_rec, name, params, expr, in_clause) ->
      begin
+       Printf.printf "Decl %s\n" name;
        let inner_depth = depth + 1 in
        let decl_param_var v_name f_env =
          let tk = create_type_var () in
@@ -473,8 +483,22 @@ let rec analyze' ast env depth ottk oenc =
            end
          | _ -> None
        in
-       let captured_envs = ref [] in
-       let attr_ast = analyze' expr f_env inner_depth None (Some captured_envs) in
+       let captured_depth_and_envs = ref [] in
+       let attr_ast = analyze' expr f_env inner_depth None (Some captured_depth_and_envs) in
+       let _ = match oenc with
+           Some enc ->
+           begin
+             let prop (d, e) =
+               Printf.printf ">> fun %s | %d | %d %s\n" name depth d (env_id_of e);
+               match d < depth with
+                 true -> enc := !enc @ [(d, e)]
+                | _ -> ()
+             in
+             List.iter prop !captured_depth_and_envs;
+           end
+         | _ -> ()
+       in
+       let captured_envs = List.map (fun (_, e) -> e) !captured_depth_and_envs in
        let actual_ret_tk = type_kind_of attr_ast in
        let unified_ret_tk = unify ret_tk actual_ret_tk in
        ignore (unify (type_kind_of ret_dummy_val) unified_ret_tk);
@@ -482,7 +506,7 @@ let rec analyze' ast env depth ottk oenc =
        let param_nodes = List.map2 complete_param incomplete_param_envs param_tks in
        let new_func_tk = Func (param_tks @ [unified_ret_tk]) in
        let env_id_tk_and_indexes =
-         List.mapi (fun i e -> (env_id_of e, env_type_kind_of e, i)) !captured_envs
+         List.mapi (fun i e -> (env_id_of e, env_type_kind_of e, i)) captured_envs
        in
        match in_clause with
          Some a ->
@@ -627,7 +651,7 @@ let rec analyze' ast env depth ottk oenc =
                  Some enc ->
                  begin
                    (* enc holds env of captured values *)
-                   enc := !enc @ [e]
+                   enc := !enc @ [(id_depth, e)]
                  end
                | _ -> ()
              end;

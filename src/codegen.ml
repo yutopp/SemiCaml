@@ -119,8 +119,6 @@ exception UnexpectedType of string
 exception UnexpectedAAst
 
 
-
-
 let rec to_llvm_ty tk = match tk with
     A.Int -> i32_ty
   | A.String -> (*; void_ty *)raise (UnexpectedType "string")
@@ -138,9 +136,8 @@ let rec to_llvm_ty tk = match tk with
   | A.Float -> float_ty
   | A.Boolean -> bool_ty
   | A.Unit -> i8_ty
-  | A.Undefined -> raise (UnexpectedType "undefined")
+  | A.Undefined -> i8_ty (* undefined will not be used. so it is same as void pointer *)
   | A.TypeVar ri -> to_llvm_ty (A.find_tk_from_type_id !ri)
-
 
 let to_p_llvm_ty tk = L.pointer_type (to_llvm_ty tk)
 
@@ -265,8 +262,13 @@ let rec make_llvm_ir aast ip___ = match aast with
      begin
        let v = make_llvm_ir expr ip___ in
        Hashtbl.add val_table id v;
+
        match in_clause with
-         Some a -> make_llvm_ir a ip___
+         Some a ->
+         begin
+           let n_ip = L.instr_succ (to_ptr_val v) in
+           make_llvm_ir a n_ip
+         end
        | None -> v
      end
 
@@ -274,11 +276,15 @@ let rec make_llvm_ir aast ip___ = match aast with
      begin
        let ft = make_closure_func_type tk in
        let f = L.declare_function id ft s_module in
+
+       (* declare parameters *)
        let ll_params = L.params f in
        let f_context = ll_params.(0) in
-       L.set_value_name "__context" f_context;
+       L.set_value_name ("__context." ^ id) f_context;
        List.iteri (fun i p -> L.set_value_name (A.get_id_of p) ll_params.(i+1)) params;
        List.iteri (fun i p -> Hashtbl.add val_table (A.get_id_of p) (Address ll_params.(i+1))) params;
+
+       (* *)
        let bb = L.append_block context "entry" f in
        let f_ip = L.instr_begin bb in
        L.position_builder f_ip builder;
@@ -287,10 +293,12 @@ let rec make_llvm_ir aast ip___ = match aast with
        let pre_map = List.map (fun (id, tk, index) -> (id, Hashtbl.find val_table id)) captured_id_tks in
        List.iter (fun (id, tk, index) -> Hashtbl.remove val_table id) captured_id_tks;
 
-       (* set captured value *)
-       let set_captured_val (id, tk , index) =
+       (* set captured value, hide normal names *)
+       let set_captured_val (c_id, tk , index) =
+         Printf.printf "| %s -> hide id(%s)\n" id c_id;
+         flush stdout;
          let e = Element (f_context, tk, index) in
-         Hashtbl.add val_table id e
+         Hashtbl.add val_table c_id e
        in
        List.iter set_captured_val captured_id_tks;
 
@@ -300,12 +308,16 @@ let rec make_llvm_ir aast ip___ = match aast with
        let l_expr = to_ptr_val (make_llvm_ir expr f_ip) in
        ignore (L.build_ret l_expr builder);
 
+       L.dump_module s_module;
+
+       Printf.printf "FuncDecl %s\n" id;
+       flush stdout;
        Llvm_analysis.assert_valid_function f;
 
        (* restore ip *)
        L.position_builder ip___ builder;
 
-       (* *)
+       (* restore hidden symbol *)
        List.iter (fun (id, rk, index) -> Hashtbl.remove val_table id) captured_id_tks;
        List.iter (fun (id, v) -> Hashtbl.add val_table id v) pre_map;
 
@@ -316,27 +328,32 @@ let rec make_llvm_ir aast ip___ = match aast with
        let cl_bag = L.build_call f_new_closure_bag [|v_fp; len|] ("bag_for_" ^ id) builder in
 
        (* capture *)
-       let p_captured_ptrs = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0; L.const_int i32_ty 1|] "capture" builder in
-       let captured_ptrs = L.build_load p_captured_ptrs "" builder in
-       let set_captured_value (id, tk, index) =
-         let to_ptr = L.build_in_bounds_gep captured_ptrs [|L.const_int i32_ty index|] "" builder in
-         let c_raw_val = Hashtbl.find val_table id in
+       let p_captured_ptrs = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0; L.const_int i32_ty 1|] ("capture_" ^ id) builder in
+       let captured_ptrs = L.build_load p_captured_ptrs ("captured_l_val_" ^ id) builder in
+       let set_captured_value (c_id, tk, index) =
+         let to_ptr = L.build_in_bounds_gep captured_ptrs [|L.const_int i32_ty index|] ("captured_g_val_" ^ id) builder in
+         let c_raw_val = Hashtbl.find val_table c_id in
          let c_val = to_ptr_val c_raw_val in
-         let bit_c_val = L.build_bitcast c_val (L.pointer_type i8_ty) "captured_val" builder in
+         let bit_c_val = L.build_bitcast c_val (L.pointer_type i8_ty) ("captured_val_" ^ id) builder in
          ignore (L.build_store bit_c_val to_ptr builder)
        in
        List.iter set_captured_value captured_id_tks;
 
        (* gep is needed to make this value as last evaluated value in this function *)
-       let inner_bag = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0|] "" builder in
+       let inner_bag = L.build_in_bounds_gep cl_bag [|L.const_int i32_ty 0|] ("ret_" ^ id) builder in
        let func = (Function (inner_bag, 0, ft)) in
 
        (* update value of id *)
+       Hashtbl.remove val_table id;
        Hashtbl.add val_table id func;
 
        (**)
        match in_clause with
-         Some a -> make_llvm_ir a ip___
+         Some a ->
+         begin
+           let n_ip = L.instr_succ inner_bag in
+           make_llvm_ir a n_ip
+         end
        | None -> func
      end
 

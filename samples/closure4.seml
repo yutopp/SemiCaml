@@ -1,0 +1,5 @@
+let f x = 10;;
+let p a = let a = 10 in (let x _ = (let nn = f 0 in a) in x);;
+let f = p 10;;
+
+print_int (f 72)

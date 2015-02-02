@@ -1,0 +1,2 @@
+let f x = 10;;
+let p a = (let x _ = (let nn = f 0 in 0) in x);;
