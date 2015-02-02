@@ -32,7 +32,7 @@
 # If so, define the subdirectory targets and uncomment this section.
 #
 
-.SUBDIRS: src runtime test/interpreter test/parser test/analyzer
+.SUBDIRS: src runtime test/interpreter test/parser test/analyzer test/combine
 
 
 clean:

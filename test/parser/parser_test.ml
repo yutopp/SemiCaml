@@ -205,6 +205,41 @@ let suite =
                                               "5",
                                               (MulIntExpr (FuncCall ("f", [IntLiteral 1]), FuncCall ("f", [IntLiteral 2])), []),
                                               "f 1 * f 2";
+
+                                              "6",
+                                              (AddIntExpr (
+                                                   SubIntExpr (
+                                                       Id "n",
+                                                       Id "r"),
+                                                   IntLiteral 1), []),
+                                              "(n - r + 1)";
+
+                                              "7",
+                                              (MulIntExpr (                                                   
+                                                   SubIntExpr (
+                                                       Id "r",
+                                                       IntLiteral 1),
+                                                   AddIntExpr (
+                                                       SubIntExpr (
+                                                           Id "n",
+                                                           Id "r"),
+                                                       IntLiteral 1)), []),
+                                              "(r - 1) * (n - r + 1)";
+
+                                              "8",
+                                              (DivIntExpr (
+                                                   MulIntExpr (                                                   
+                                                       SubIntExpr (
+                                                           Id "r",
+                                                           IntLiteral 1),
+                                                       AddIntExpr (
+                                                           SubIntExpr (
+                                                               Id "n",
+                                                               Id "r"),
+                                                           IntLiteral 1)),
+                                                   Id "r"), []),
+                                              "(r - 1) * (n - r + 1) / r"
+
                                              ]);
 
                 "add_expr_rule test" >::: (List.map
@@ -509,7 +544,41 @@ let suite =
                                                     FuncCall (
                                                         "print_newline",
                                                         [UnitLiteral]))], []),
-                                             "print_int n; print_newline ()";                                               
+                                             "print_int n; print_newline ()";
+
+                                             "9",
+                                             (Program [
+                                                  FuncDecl (
+                                                      false,
+                                                      "f",
+                                                      ["x"],
+                                                      VerDecl (
+                                                          "a",
+                                                          Id "x",
+                                                          Some (
+                                                              VerDecl (
+                                                                  "g",
+                                                                  AddIntExpr (
+                                                                      Id "a",
+                                                                      IntLiteral 10),
+                                                                  Some (
+                                                                      Id "g")))),
+                                                      None);
+                                                  VerDecl (
+                                                      "p",
+                                                      FuncCall (
+                                                          "f",
+                                                          [IntLiteral 10]),
+                                                      Some (
+                                                          Sequence (
+                                                              FuncCall (
+                                                                  "print_int",
+                                                                  [Id "p"]),
+                                                              FuncCall (
+                                                                  "print_newline",
+                                                                  [UnitLiteral]))))], []),
+                                             "let f x = let a = x in let g = a + 10 in g ;;
+                                              let p = f 10 in print_int p; print_newline ();;";
                                             ]);]
 
 let run_test = run_test_tt_main suite

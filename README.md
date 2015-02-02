@@ -33,6 +33,9 @@ omake check_analyzer
 ```
 omake check_interpreter
 ```
+```
+omake check_combine
+```
 
 # Usage
 ```

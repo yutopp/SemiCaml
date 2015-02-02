@@ -336,7 +336,38 @@ let suite =
                                           ArrayGet (
                                               "arr",
                                               IntLiteral 0)]);
-
+                                     "33",
+                                     UnitVal,
+                                     (Program [
+                                          FuncDecl (
+                                              false,
+                                              "f",
+                                              ["x"],
+                                              VerDecl (
+                                                  "a",
+                                                  Id "x",
+                                                  Some (
+                                                      VerDecl (
+                                                          "g",
+                                                          AddIntExpr (
+                                                              Id "a",
+                                                              IntLiteral 10),
+                                                          Some (
+                                                              Id "g")))),
+                                              None);
+                                          VerDecl (
+                                              "p",
+                                              FuncCall (
+                                                  "f",
+                                                  [IntLiteral 10]),
+                                              Some (
+                                                  Sequence (
+                                                      FuncCall (
+                                                          "print_int",
+                                                          [Id "p"]),
+                                                      FuncCall (
+                                                          "print_newline",
+                                                          [UnitLiteral]))))]);                                     
                                     ]);
                 "interpreter test" >::: (List.map
                                            (fun (title,res,arg) ->
@@ -526,8 +557,42 @@ let suite =
                                                          FuncCall (
                                                              "pow",
                                                              [IntLiteral 3;
-                                                              IntLiteral 3])));
-                                               ])
+                                                              IntLiteral 3])))]);
+                                            "5",
+                                            IntVal 10,
+                                            (Program [
+                                                 FuncDecl (
+                                                     true,
+                                                     "comb",
+                                                     ["n";"r"],
+                                                     CondExpr (
+                                                         LogicOrExpr (
+                                                             EqualExpr (
+                                                                 Id "n",
+                                                                 Id "r"),
+                                                             EqualExpr (
+                                                                 Id "r",
+                                                                 IntLiteral 0)),
+                                                         IntLiteral 1,
+                                                         FuncCall (
+                                                             "comb",
+                                                             [Id "n";
+                                                              DivIntExpr (
+                                                                  MulIntExpr (
+                                                                      SubIntExpr (
+                                                                          Id "r",
+                                                                          IntLiteral 1),
+                                                                      AddIntExpr (
+                                                                          SubIntExpr (
+                                                                              Id "n",
+                                                                              Id "r"),
+                                                                          IntLiteral 1)),
+                                                                  Id "r")])),
+                                                     None);
+                                                 FuncCall (
+                                                     "comb",
+                                                     [IntLiteral 5;
+                                                      IntLiteral 2])]);
                                            ]);
                ]
 
