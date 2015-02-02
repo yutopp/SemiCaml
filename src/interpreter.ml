@@ -17,6 +17,11 @@ let rec recursive_to_string list printer delimiter =
   | head :: [] -> printer head
   | head :: tail -> (printer head) ^ delimiter ^ (recursive_to_string tail printer delimiter)
 
+let delete_num_in_str id =
+  let dot_pos = String.index id '.' in
+  let erase_num_id = String.sub id 0 dot_pos in
+  erase_num_id
+
 let rec rustic_val_to_str values = match values with
   | IntVal n -> Printf.sprintf "%d" n
   | FloatVal r -> Printf.sprintf "%F" r
@@ -26,13 +31,24 @@ let rec rustic_val_to_str values = match values with
        "%s array = [|%s|]"
        (Analyzer.to_string tk)
        (recursive_to_string (Array.to_list arr) rustic_val_to_str "; ")
+  | FunVal (name,_,_,Analyzer.Func types) ->
+     begin
+       try
+         let name_ = delete_num_in_str name in
+         Printf.sprintf
+           "%s : %s"
+           name_
+           (recursive_to_string types Analyzer.to_string " -> ")
+       with
+       | Not_found ->
+          Printf.sprintf
+            "%s : %s"
+            name
+            (recursive_to_string types Analyzer.to_string " -> ")
+       | _ -> failwith "not allow id"
+     end
   | UnitVal -> "()"
   | _ -> failwith "not expected type in rustic_val_to_str"
-
-let delete_num_in_str id =
-  let dot_pos = String.index id '.' in
-  let erase_num_id = String.sub id 0 dot_pos in
-  erase_num_id
 
 let rec val_to_str values = match values with
   | IntVal n -> Printf.sprintf "- : int = %d" n
@@ -196,7 +212,7 @@ let rec eval' input rec_depth =
      eval' e2 rec_depth
   | CallFunc (id,call_args,_) ->
      let func = lookup id val_table in
-     let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in     
+     let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
      begin
        match func with
        | FunVal (_,pro_args,e1,_) ->
@@ -233,6 +249,8 @@ let rec eval' input rec_depth =
                UnitVal
             | _ -> failwith "not march args type"
           end
+       | TopVarVal (id,value,_) ->
+          value
        | _ -> failwith "func value is expected"
      end
   | ArrayCreate (size,t) ->
