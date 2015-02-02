@@ -558,41 +558,6 @@ let suite =
                                                              "pow",
                                                              [IntLiteral 3;
                                                               IntLiteral 3])))]);
-                                            "5",
-                                            IntVal 10,
-                                            (Program [
-                                                 FuncDecl (
-                                                     true,
-                                                     "comb",
-                                                     ["n";"r"],
-                                                     CondExpr (
-                                                         LogicOrExpr (
-                                                             EqualExpr (
-                                                                 Id "n",
-                                                                 Id "r"),
-                                                             EqualExpr (
-                                                                 Id "r",
-                                                                 IntLiteral 0)),
-                                                         IntLiteral 1,
-                                                         FuncCall (
-                                                             "comb",
-                                                             [Id "n";
-                                                              DivIntExpr (
-                                                                  MulIntExpr (
-                                                                      SubIntExpr (
-                                                                          Id "r",
-                                                                          IntLiteral 1),
-                                                                      AddIntExpr (
-                                                                          SubIntExpr (
-                                                                              Id "n",
-                                                                              Id "r"),
-                                                                          IntLiteral 1)),
-                                                                  Id "r")])),
-                                                     None);
-                                                 FuncCall (
-                                                     "comb",
-                                                     [IntLiteral 5;
-                                                      IntLiteral 2])]);
                                            ]);
                ]
 
