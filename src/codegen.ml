@@ -248,7 +248,7 @@ let make_managed_value tk v = match tk with
   | _ -> raise (InvalidValue "")
 
 let rec make_llvm_ir aast ip___ = match aast with
-    A.Term(ast, tk) ->
+    A.Term (ast, tk) ->
     begin
       Printf.printf "term\n";
       let v = match ast with
@@ -261,7 +261,7 @@ let rec make_llvm_ir aast ip___ = match aast with
       Address v
     end
 
-  | A.VarDecl(id, expr, tk, in_clause) ->
+  | A.VarDecl (id, expr, tk, in_clause) ->
      begin
        let v = make_llvm_ir expr ip___ in
        Hashtbl.add val_table id v;
@@ -399,9 +399,16 @@ let rec make_llvm_ir aast ip___ = match aast with
 
   | A.CallFunc (id, args, tk) ->
      begin
-       Printf.printf "CallFunc %s\n" id;
+       Printf.printf "CallFunc %s %s\n" id (A.to_string tk);
+       let gen tk v = match tk with
+           A.Func params_tk -> Function (v, 0, make_closure_func_type tk)
+         | A.IntrinsicFunc params_tk -> BuiltinFunction v
+         | _ -> Address v
+       in
+
        (* TODO: fix it to use ID *)
-       let rf = Hashtbl.find val_table id in
+       let temp_id = A.IdTerm (id, A.Undefined) in
+       let rf = make_llvm_ir temp_id ip___ in
 
        let c_ip = ref ip___ in
        let seq a =
@@ -416,20 +423,20 @@ let rec make_llvm_ir aast ip___ = match aast with
          begin
            (* this context may be appeared at the recursive function *)
            let e_args = [context] @ (List.map seq args) in
-           Address (L.build_call f (Array.of_list e_args) "" builder)
+           gen tk (L.build_call f (Array.of_list e_args) "" builder)
          end
 
        | Function (bag, _, f_ty) ->
          begin
            let f, captured_context = get_fp_and_context bag f_ty in
            let e_args = [captured_context] @ (List.map seq args) in
-           Address (L.build_call f (Array.of_list e_args) "" builder)
+           gen tk (L.build_call f (Array.of_list e_args) "" builder)
          end
 
        | BuiltinFunction f ->
           begin
             let e_args = List.map seq args in
-            Address (L.build_call f (Array.of_list e_args) "" builder)
+            gen tk (L.build_call f (Array.of_list e_args) "" builder)
           end
 
        | Element (v, tk, index) ->
@@ -441,14 +448,14 @@ let rec make_llvm_ir aast ip___ = match aast with
                 let f_ty = make_closure_func_type tk in
                 let f, captured_context = get_fp_and_context bag f_ty in
                 let e_args = [captured_context] @ (List.map seq args) in
-                Address (L.build_call f (Array.of_list e_args) "" builder)
+                gen tk (L.build_call f (Array.of_list e_args) "" builder)
               end
 
             | A.IntrinsicFunc params ->
                begin
                  let f = get_element v (to_llvm_ty tk) index in
                  let e_args = List.map seq args in
-                 Address (L.build_call f (Array.of_list e_args) "" builder)
+                 gen tk (L.build_call f (Array.of_list e_args) "" builder)
                end
 
             | _ -> raise (InvalidValue (Printf.sprintf "%s is not function (%s)" id (to_string rf)))

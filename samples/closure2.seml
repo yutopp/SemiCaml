@@ -1,0 +1,5 @@
+(*let f x = let a = x in let g = 0 in g ;;*)
+
+let p x = let f a = print_int a in f;;
+
+let f = p 10 in f 10;;
