@@ -139,11 +139,12 @@ let rec to_llvm_ty tk = match tk with
   | A.Boolean -> bool_ty
   | A.Unit -> i8_ty
   | A.Undefined -> raise (UnexpectedType "undefined")
-  | _ -> raise  (UnexpectedType "var")
+  | A.TypeVar ri -> to_llvm_ty (A.find_tk_from_type_id !ri)
+
 
 let to_p_llvm_ty tk = L.pointer_type (to_llvm_ty tk)
 
-exception InvalidOp
+exception InvalidOp of string
 exception InvalidType
 exception InvalidValue of string
 
@@ -172,59 +173,59 @@ let make_closure_func_type tk =
   L.function_type (to_p_llvm_ty ret_tk) ll_params_ty
 
 let make_binary_op l r op =
-  let make_add tk = match tk with
+  let make_add tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_add l r "" builder
     | A.Float -> L.build_fadd l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "add - %s" (A.to_string tk)))
   in
-  let make_sub tk = match tk with
+  let make_sub tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_sub l r "" builder
     | A.Float -> L.build_fsub l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "sub - %s" (A.to_string tk)))
   in
-  let make_mul tk = match tk with
+  let make_mul tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_mul l r "" builder
     | A.Float -> L.build_fmul l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "mul - %s" (A.to_string tk)))
   in
-  let make_div tk = match tk with
+  let make_div tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_sdiv l r "" builder (* signed div *)
     | A.Float -> L.build_fdiv l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "div - %s" (A.to_string tk)))
   in
   let make_or () = L.build_or l r "" builder
   in
   let make_and () = L.build_and l r "" builder
   in
-  let make_eq tk = match tk with
+  let make_eq tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_icmp L.Icmp.Eq l r "" builder
     | A.Float -> L.build_fcmp L.Fcmp.Ueq l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "eq - %s" (A.to_string tk)))
   in
-  let make_not_eq tk = match tk with
+  let make_not_eq tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_icmp L.Icmp.Ne l r "" builder
     | A.Float -> L.build_fcmp L.Fcmp.Une l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "not eq - %s" (A.to_string tk)))
   in
-  let make_gte tk = match tk with
+  let make_gte tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_icmp L.Icmp.Sge l r "" builder
     | A.Float -> L.build_fcmp L.Fcmp.Uge l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "greater than eq - %s" (A.to_string tk)))
   in
-  let make_gt tk = match tk with
+  let make_gt tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_icmp L.Icmp.Sgt l r "" builder
     | A.Float -> L.build_fcmp L.Fcmp.Ugt l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "greater than - %s" (A.to_string tk)))
   in
-  let make_lte tk = match tk with
+  let make_lte tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_icmp L.Icmp.Sle l r "" builder
     | A.Float -> L.build_fcmp L.Fcmp.Ule l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "less than equal - %s" (A.to_string tk)))
   in
-  let make_lt tk = match tk with
+  let make_lt tk = match A.unwrap_type_kind tk with
       A.Int -> L.build_icmp L.Icmp.Slt l r "" builder
     | A.Float -> L.build_fcmp L.Fcmp.Ult l r "" builder
-    | _ -> raise InvalidOp
+    | _ -> raise (InvalidOp (Printf.sprintf "less than - %s" (A.to_string tk)))
   in
   match op with
     A.Add tk -> make_add tk

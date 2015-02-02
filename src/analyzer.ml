@@ -52,18 +52,6 @@ let create_type_var () =
   type_id := i + 1;
   TypeVar (ref i)
 
-(*
-let unify_type id target tk =
-  Hashtbl.remove sym id;
-  let n = match target with
-      EItem (e, s, _, depth, st) -> EItem (e, s, tk, depth, st)
-    | ETerm (s, _, depth) -> ETerm (s, tk, depth)
-    | _ -> raise UnexpectedEnv
-  in
-  Hashtbl.add sym id n;
-  Printf.printf "NEW! %s: %s\n" id (to_string tk);
-  save_env_as_flat id n
- *)
 
 type environment =
     EModule of symbol_table
@@ -176,6 +164,7 @@ let unify ltk rtk =
   | (Int, Int) -> Int
   | (Float, Float) -> Float
   | (Boolean, Boolean) -> Boolean
+  | (l, r) when l = r -> l
   | (l, r) -> raise (SemanticError (Printf.sprintf "type missmatch %s <> %s" (to_string l) (to_string r)))
 
 let rec dump_env ?(offset=0) env = match env with
@@ -342,6 +331,10 @@ let unwrap_type_kind tk = match tk with
     end
   | _ -> tk
 
+let dump_type_env () =
+  Hashtbl.iter (fun k v -> (Printf.printf "type.%d -> %s\n" k (to_string (unwrap_type_kind v)))) type_table
+
+
 let rec type_kind_of a =
   let tk = match a with
       Flow _ -> raise (UnexpectedAttributedAST "Flow")
@@ -370,7 +363,7 @@ let rec analyze' ast env depth ottk oenc =
       (* if expected type is specified and actual type is different from expected type, it is error *)
       Some ttk -> begin match tk = (unwrap_type_kind ttk) with
                           true -> Term (ast, tk)
-                        | _ -> raise (SemanticError (Printf.sprintf "type is not matched / %s <> %s" (to_string tk) (to_string ttk)))
+                        | _ -> Term (ast, unify tk ttk)
                   end
     | None -> Term (ast, tk)
   in
@@ -467,8 +460,8 @@ let rec analyze' ast env depth ottk oenc =
        let f_env = make_tmp_env env in
        (* for return type *)
        let new_id = make_new_id name in
-       let dummy_val = decl_return_type_var new_id f_env in
-       let ret_tk = type_kind_of dummy_val in
+       let ret_dummy_val = decl_return_type_var new_id f_env in
+       let ret_tk = type_kind_of ret_dummy_val in
        let incomplete_param_envs = List.map (fun p -> decl_param_var p f_env) params in
        let param_nodes = List.map (fun a -> type_kind_of a) incomplete_param_envs in
        let func_tk = Func (param_nodes @ [ret_tk]) in
@@ -484,6 +477,7 @@ let rec analyze' ast env depth ottk oenc =
        let attr_ast = analyze' expr f_env inner_depth None (Some captured_envs) in
        let actual_ret_tk = type_kind_of attr_ast in
        let unified_ret_tk = unify ret_tk actual_ret_tk in
+       ignore (unify (type_kind_of ret_dummy_val) unified_ret_tk);
        let param_tks = List.map convert_aast_to_tk incomplete_param_envs in
        let param_nodes = List.map2 complete_param incomplete_param_envs param_tks in
        let new_func_tk = Func (param_tks @ [unified_ret_tk]) in
@@ -536,10 +530,14 @@ let rec analyze' ast env depth ottk oenc =
        if (type_kind_of cond_attr) = Boolean then
          begin
            let a_attr = analyze' a env depth None oenc in
+           let a_tk = type_kind_of a_attr in
            let b_attr = analyze' b env depth None oenc in
-           match (type_kind_of a_attr) = (type_kind_of b_attr) with
-             true -> Cond (cond_attr, a_attr, b_attr)
-           | _ -> raise (SemanticError "types of rhs or lhs is different")
+           let b_tk = type_kind_of b_attr in
+           try
+             let _ = unify a_tk b_tk in
+             Cond (cond_attr, a_attr, b_attr)
+           with
+             _ -> raise (SemanticError (Printf.sprintf "types of rhs or lhs is different - %s <> %s" (to_string a_tk) (to_string b_tk)))
          end
        else raise (SemanticError "condition must be 'boolean'")
      end
@@ -676,6 +674,6 @@ let analyze ast =
   (* debug *)
   let env, depth = anayzer in
   dump_env env;
-
+  dump_type_env ();
   (* result *)
   attr_ast

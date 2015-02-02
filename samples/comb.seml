@@ -1,0 +1,6 @@
+let rec comb n r =
+  if n == r || r == 0
+  then 1
+  else comb n (r - 1) * (n - r + 1) / r;;
+
+print_int (comb 5 2);;
