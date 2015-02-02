@@ -407,7 +407,8 @@ let rec make_llvm_ir aast ip___ = match aast with
        in
 
        (* TODO: fix it to use ID *)
-       let rf = Hashtbl.find val_table id in
+       let temp_id = A.IdTerm (id, A.Undefined) in
+       let rf = make_llvm_ir temp_id ip___ in
 
        let c_ip = ref ip___ in
        let seq a =
