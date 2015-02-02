@@ -1,0 +1,3 @@
+let f x = let a = x in let g = a + 10 in g ;;
+
+let p = f 10 in print_int p; print_newline ();;

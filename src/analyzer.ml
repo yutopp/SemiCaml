@@ -415,7 +415,7 @@ let rec analyze' ast env depth ottk oenc =
   match ast with
     VerDecl (name, expr, in_clause) ->
     begin
-      let inner_depth = depth + 1 in
+      let inner_depth = depth in
       let v_env = make_tmp_env env in
       let attr_ast = analyze' expr v_env inner_depth None oenc in
       let tk = type_kind_of attr_ast in

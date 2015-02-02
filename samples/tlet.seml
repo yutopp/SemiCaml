@@ -1,0 +1,3 @@
+let f a = let b = a in b ;;
+
+print_int (f 10) ;;

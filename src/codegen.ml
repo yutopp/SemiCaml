@@ -309,7 +309,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        List.iter (fun (id, rk, index) -> Hashtbl.remove val_table id) captured_id_tks;
        List.iter (fun (id, v) -> Hashtbl.add val_table id v) pre_map;
 
-       let v_fp = L.build_bitcast f (L.pointer_type i8_ty) "" builder in
+       let v_fp = L.build_bitcast f (L.pointer_type i8_ty) "f_to_p" builder in
        let len = L.const_int i32_ty (List.length captured_id_tks) in
 
        (* closure bag *)
@@ -322,7 +322,7 @@ let rec make_llvm_ir aast ip___ = match aast with
          let to_ptr = L.build_in_bounds_gep captured_ptrs [|L.const_int i32_ty index|] "" builder in
          let c_raw_val = Hashtbl.find val_table id in
          let c_val = to_ptr_val c_raw_val in
-         let bit_c_val = L.build_bitcast c_val (L.pointer_type i8_ty) "" builder in
+         let bit_c_val = L.build_bitcast c_val (L.pointer_type i8_ty) "captured_val" builder in
          ignore (L.build_store bit_c_val to_ptr builder)
        in
        List.iter set_captured_value captured_id_tks;
