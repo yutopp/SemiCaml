@@ -5,7 +5,7 @@ exception UnexpectedEnv
 exception UnexpectedAttributedAST of string
 
 exception SemanticError of string
-
+exception UnexpectedTypeKind
 
 type type_kind =
     Int
@@ -302,7 +302,7 @@ type a_ast =
   | Term of ast * type_kind
   | BinOp of a_ast * a_ast * operator * type_kind
   | Cond of a_ast * a_ast * a_ast
-  | CallFunc of string * a_ast list * type_kind list * type_kind
+  | CallFunc of a_ast * a_ast list (* reciever * args *)
   | ArrayCreate of a_ast * type_kind
   | ArrayRef of string * a_ast * type_kind
   | ArrayAssign of string * a_ast * a_ast * type_kind
@@ -318,7 +318,7 @@ let get_id_of a = match a with
   | Term _ -> raise (UnexpectedAttributedAST "Term")
   | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
   | Cond _ -> raise (UnexpectedAttributedAST "Cond")
-  | CallFunc (id, _, _, _) -> id
+  | CallFunc (_, _) -> raise (UnexpectedAttributedAST "CallFunc")
   | ArrayCreate _ -> raise (UnexpectedAttributedAST "ArrayCreate")
   | ArrayRef _ -> raise (UnexpectedAttributedAST "ArrayRef")
   | ArrayAssign _ -> raise (UnexpectedAttributedAST "ArrayAssign")
@@ -341,6 +341,18 @@ let unwrap_type_kind tk = match tk with
 let dump_type_env () =
   Hashtbl.iter (fun k v -> (Printf.printf "type.%d -> %s\n" k (to_string (unwrap_type_kind v)))) type_table
 
+(* utility for function *)
+let param_type_from_list tkx = List.rev (List.tl (List.rev tkx))
+let return_type_from_list tkx = List.hd (List.rev tkx)
+
+let param_type tk = match tk with
+    Func params -> param_type_from_list params
+  | otherwise -> raise UnexpectedTypeKind
+
+let return_type tk = match tk with
+    Func params -> return_type_from_list params
+  | otherwise -> raise UnexpectedTypeKind
+
 
 let rec type_kind_of a =
   let tk = match a with
@@ -348,7 +360,7 @@ let rec type_kind_of a =
     | Term (_, tk) -> tk
     | BinOp (_, _, _, tk) -> tk
     | Cond (cond, a, b) -> type_kind_of a
-    | CallFunc (_, _, _, ret_tk) -> ret_tk
+    | CallFunc (a, _) -> return_type (type_kind_of a)
     | ArrayCreate (_, tk) -> tk
     | ArrayRef (_, _, tk) -> tk
     | ArrayAssign (_, _, _, tk) -> tk
@@ -590,7 +602,7 @@ let rec analyze' ast env depth ottk oenc =
 
   | FuncCall (name, args) ->
      begin
-       let call_function id params =
+       let call_function aast params =
          let params_len = List.length params in
          if List.length params < 1 then raise (SemanticError "Function must have at least 1 param");
          if List.length args <> (params_len - 1) then raise (SemanticError (Printf.sprintf "langth of args and params is different / %s args(%d) <> params(%d)" name (List.length args) (params_len - 1)));
@@ -603,23 +615,22 @@ let rec analyze' ast env depth ottk oenc =
            | _ -> raise (SemanticError (Printf.sprintf "type of index %d is mismatched / %s <> %s" i (to_string (type_kind_of ea)) (to_string param_tk)))
          in
          let a_args = List.mapi eval_arg args in
-         let return_ty = List.nth params (params_len - 1) in
-         CallFunc (id, a_args, List.rev (List.tl (List.rev params)), return_ty)
+         CallFunc (aast, a_args)
        in
-       let rec apply id tk = match tk with
-           Func params -> call_function id params
+       let rec apply aast tk = match tk with
+           Func params -> call_function aast params
          | _ ->
             begin
+              (* prepare function type for type inference *)
               let n_params = List.map (fun x -> create_type_var ()) args in
               let n_ret = create_type_var () in
               let fn_type = Func (n_params @ [n_ret]) in
-              apply id fn_type
+              apply aast fn_type
             end
        in
-       let f = analyze' (Id name) env depth None oenc in
-       match f with
-         IdTerm (id, tk) -> apply id tk
-       | _ -> raise (SemanticError "function is not callable")
+       let f_aast = analyze' (Id name) env depth None oenc in
+       let tk = type_kind_of f_aast in
+       apply f_aast tk
      end
 
   | Id name ->

@@ -62,20 +62,20 @@ let suite =
                                              Seq (
                                                  Seq (
                                                      CallFunc (
-                                                         "print_int",
-                                                         [Term (IntLiteral 1, Int)],
-                                                         [Int],
-                                                         Unit),
+                                                         IdTerm ("print_int", Func [Int; Unit]),
+                                                         [Term (IntLiteral 1, Int)]
+                                                       ),
                                                      CallFunc (
-                                                         "print_int",
-                                                         [Term (IntLiteral 2, Int)],
-                                                         [Int],
-                                                         Unit)),
+                                                         IdTerm ("print_int", Func [Int; Unit]),
+                                                         [Term (IntLiteral 2, Int)]
+                                                       )
+                                                   ),
                                                  CallFunc (
-                                                     "print_int",
-                                                     [Term (IntLiteral 3, Int)],
-                                                     [Int],
-                                                     Unit))]),
+                                                     IdTerm ("print_int", Func [Int; Unit]),
+                                                     [Term (IntLiteral 3, Int)]
+                                                   )
+                                               )]
+                                           ),
                                         (Program [
                                              Sequence (
                                                  Sequence (

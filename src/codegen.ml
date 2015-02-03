@@ -394,9 +394,10 @@ let rec make_llvm_ir aast ip___ = match aast with
        Address phi
      end
 
-  | A.CallFunc (id, args, params_tk, ret_tk) ->
+  | A.CallFunc (func, args) ->
      begin
-       let func_tk = A.Func (List.map A.unwrap_type_kind (params_tk @ [ret_tk])) in
+       let func_tk = A.type_kind_of func in
+       let ret_tk = A.return_type func_tk in
        (* Printf.printf "CallFunc %s / call %s\n" id (A.to_string func_tk);
        flush stdout; *)
 
@@ -407,10 +408,7 @@ let rec make_llvm_ir aast ip___ = match aast with
          | _ -> Address v
        in
 
-       (* TODO: fix it to use ID *)
-       let temp_id = A.IdTerm (id, A.Undefined) in
-       let rf = make_llvm_ir temp_id ip___ in
-
+       let rf = make_llvm_ir func ip___ in
        let c_ip = ref ip___ in
        let seq a =
          let v = to_ptr_val (make_llvm_ir a !c_ip) in
@@ -446,7 +444,7 @@ let rec make_llvm_ir aast ip___ = match aast with
                 gen ret_tk (L.build_call f (Array.of_list e_args) "" builder)
               end
 
-            | _ -> raise (InvalidValue (Printf.sprintf "%s is not function [elem] (%s)" id (to_string rf)))
+            | _ -> raise (InvalidValue (Printf.sprintf "%s is not function [elem] (%s)" c_id (to_string rf)))
           end
 
        | Address v ->
@@ -457,7 +455,7 @@ let rec make_llvm_ir aast ip___ = match aast with
             gen ret_tk (L.build_call f (Array.of_list e_args) "" builder)
           end
 
-       | _ -> raise (InvalidValue (Printf.sprintf "%s is not function (%s)" id (to_string rf)))
+       | _ -> raise (InvalidValue (Printf.sprintf "not function (%s)" (to_string rf)))
      end
 
   | A.ArrayCreate (elem_num, A.Array inner_tk) ->
