@@ -1,1 +1,7 @@
-let rec times f n = if n = 0 then () else (times (n - 1); f n; ());;
+let rec times f n = if n = 0 then () else (times f (n - 1); f n; ());;
+
+times print_int 10;;
+print_newline();;
+
+let f n = print_int n; print_newline();;
+times f 20;;

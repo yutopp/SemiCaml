@@ -526,8 +526,9 @@ let compile aast =
   let decl_builtin_functions () =
     let dummy_capture = L.const_array (L.pointer_type i8_ty) [||] in
     let decl_builtin name f ty =
+      let cf = L.const_bitcast f ptr_to_function_ty in
       let cp = L.const_bitcast dummy_capture ptr_to_vals_ty in
-      let s = L.const_struct context [|f; cp; (L.const_null ptr_to_vals_ty)|] in
+      let s = L.const_struct context [|cf; cp; (L.const_null ptr_to_vals_ty)|] in
       let g = L.define_global (name ^ "_v") s s_module in
       Hashtbl.add val_table name (Function (g, 0, ty))
     in

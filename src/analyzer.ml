@@ -599,7 +599,7 @@ let rec analyze' ast env depth ottk oenc =
        let call_function id params =
          let params_len = List.length params in
          if List.length params < 1 then raise (SemanticError "Function must have at least 1 param");
-         if List.length args <> (params_len - 1) then raise (SemanticError "langth of args and params is different");
+         if List.length args <> (params_len - 1) then raise (SemanticError (Printf.sprintf "langth of args and params is different / %s args(%d) <> params(%d)" name (List.length args) (params_len - 1)));
          (* check semantics of args *)
          let eval_arg i a =
            let param_tk = (List.nth params i) in
