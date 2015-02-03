@@ -107,8 +107,11 @@ and logic_and_expr_rule tokens = match equal_expr_rule tokens with
 
 and equal_expr_rule tokens = match comp_expr_rule tokens with
   | (ast, tail) -> begin match tail with
-    | Op Equal :: tail' -> begin match equal_expr_rule tail' with
+    | Op Equal :: tail' -> begin match comp_expr_rule tail' with
       | (ast', tail'') -> (EqualExpr (ast, ast'), tail'')
+    end
+    | Op NotEqual :: tail' -> begin match comp_expr_rule tail' with
+      | (ast', tail'') -> (NotEqualExpr (ast, ast'), tail'')
     end
     | _ -> (ast, tail)
   end

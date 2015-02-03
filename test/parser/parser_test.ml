@@ -304,6 +304,14 @@ let suite =
                                                 "2",
                                                 (EqualExpr (IntLiteral 1, IntLiteral 2), []),
                                                 "1 = 2";
+
+                                                "3",
+                                                (NotEqualExpr (IntLiteral 1, IntLiteral 2), []),
+                                                "1 <> 2";
+
+                                                "4",
+                                                (EqualExpr (IntLiteral 1, IntLiteral 2), [Op Equal; IntLiteral 3]),
+                                                "1 = 2 = 3";
                                                ]);
 
                 "logic_and_expr_rule test" >::: (List.map
