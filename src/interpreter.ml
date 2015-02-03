@@ -211,7 +211,7 @@ let rec eval' input rec_depth =
      let id_ = add_depth_to_id id rec_depth in
      (env_ext val_table id_ (FunVal (id_, arg_ids, e1, t)));
      eval' e2 rec_depth
-  | CallFunc (id,call_args,_) ->
+  | CallFunc (id,call_args,_,_) ->
      let id_ = id ^ ".0" in
      let func = lookup id_ val_table in
      let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
