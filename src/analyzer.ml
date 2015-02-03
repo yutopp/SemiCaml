@@ -134,19 +134,19 @@ let unify ltk rtk =
     match (ltk, rtk) with
       (Undefined, r) ->
       begin
-        Printf.printf "=> %d is %d\n" (!li) (!ri);
+        (* Printf.printf "=> %d is %d\n" (!li) (!ri); *)
         li := !ri; (* unify *)
         TypeVar ri
       end
     | (l, Undefined) ->
       begin
-        Printf.printf "=> %d is %d\n" (!ri) (!li);
+        (* Printf.printf "=> %d is %d\n" (!ri) (!li); *)
         ri := !li; (* unify *)
         TypeVar ri
       end
     | (l, r) when l = r ->
       begin
-        Printf.printf "=> %d is %d\n" (!ri) (!li);
+        (* Printf.printf "=> %d is %d\n" (!ri) (!li); *)
         ri := !li; (* unify *)
         TypeVar ri
       end
@@ -157,7 +157,7 @@ let unify ltk rtk =
     match buf_tk with
       Undefined ->
       begin
-        Printf.printf "=> %i is %s\n" i (to_string tk);
+        (* Printf.printf "=> %i is %s\n" i (to_string tk); *)
         update_type_val i tk;
         tk
       end
@@ -442,7 +442,7 @@ let rec analyze' ast env depth ottk oenc =
 
   | FuncDecl (is_rec, name, params, expr, in_clause) ->
      begin
-       Printf.printf "Decl %s\n" name;
+       (* Printf.printf "Decl %s\n" name; *)
        let inner_depth = depth + 1 in
        let decl_param_var v_name f_env =
          let tk = create_type_var () in
@@ -477,7 +477,7 @@ let rec analyze' ast env depth ottk oenc =
            Some enc ->
            begin
              let prop (d, e) =
-               Printf.printf ">> fun %s | %d | %d %s\n" name depth d (env_id_of e);
+               (* Printf.printf ">> fun %s | %d | %d %s\n" name depth d (env_id_of e); *)
                match d < depth with
                  true -> enc := !enc @ [(d, e)]
                 | _ -> ()
@@ -691,5 +691,6 @@ let analyze ast =
   let env, depth = anayzer in
   dump_env env;
   dump_type_env ();
+
   (* result *)
   attr_ast

@@ -232,7 +232,7 @@ let make_managed_value tk v = match tk with
 let rec make_llvm_ir aast ip___ = match aast with
     A.Term (ast, tk) ->
     begin
-      Printf.printf "term\n";
+      (* Printf.printf "term\n"; *)
       let v = match ast with
           Ast.IntLiteral v -> make_managed_value A.Int (L.const_int i32_ty v)
         | Ast.FloatLiteral v -> make_managed_value A.Float (L.const_float float_ty v)
@@ -280,7 +280,7 @@ let rec make_llvm_ir aast ip___ = match aast with
 
        (* set captured value, hide normal names *)
        let set_captured_val (c_id, tk , index) =
-         Printf.printf "| %s -> hide id(%s)\n" id c_id;
+         (* Printf.printf "| %s -> hide id(%s)\n" id c_id; *)
          flush stdout;
          let e = Element (f_context, tk, index) in
          Hashtbl.add val_table c_id e
@@ -293,9 +293,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        let l_expr = to_ptr_val (make_llvm_ir expr f_ip) in
        ignore (L.build_ret l_expr builder);
 
-       L.dump_module s_module;
-
-       Printf.printf "FuncDecl %s\n" id;
+       (* Printf.printf "FuncDecl %s\n" id; *)
        flush stdout;
        Llvm_analysis.assert_valid_function f;
 
@@ -402,7 +400,7 @@ let rec make_llvm_ir aast ip___ = match aast with
   | A.CallFunc (id, args, params_tk, ret_tk) ->
      begin
        let func_tk = A.Func (List.map A.unwrap_type_kind (params_tk @ [ret_tk])) in
-       Printf.printf "CallFunc %s / call %s\n" id (A.to_string func_tk);
+       (* Printf.printf "CallFunc %s / call %s\n" id (A.to_string func_tk); *)
        flush stdout;
 
        let gen wtk v =
@@ -457,7 +455,6 @@ let rec make_llvm_ir aast ip___ = match aast with
        | Address v ->
           begin
             let bag = L.build_bitcast v (L.pointer_type function_bag_ty) "" builder in
-            L.dump_value bag;
             let f, captured_context = get_fp_and_context bag (make_closure_func_type func_tk) in
             let e_args = [captured_context] @ (List.map seq args) in
             gen ret_tk (L.build_call f (Array.of_list e_args) "" builder)
@@ -507,7 +504,7 @@ let rec make_llvm_ir aast ip___ = match aast with
 
   | A.IdTerm (id, _) ->
      begin
-       Printf.printf "IdTerm %s\n" id;
+       (* Printf.printf "IdTerm %s\n" id; *)
        Hashtbl.find val_table id
      end
 
@@ -525,7 +522,7 @@ let rec make_llvm_ir_seq aast ip = match aast with
   | v -> ignore (make_llvm_ir v ip)
 
 let compile aast =
-  Printf.printf "startllvm\n";
+  (* Printf.printf "startllvm\n"; *)
 
   (* decl builtin functions *)
   let decl_builtin_functions () =
@@ -571,7 +568,6 @@ let compile aast =
     decl_print_newline();
   in
   decl_builtin_functions ();
-  L.dump_module s_module;
 
   let ft = L.function_type void_ty [||] in
   let f = L.declare_function "_semi_caml_entry" ft s_module in
