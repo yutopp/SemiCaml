@@ -395,26 +395,20 @@ let rec analyze' ast env depth ottk oenc =
     | _ -> raise (SemanticError "[ice] invalid env kind")
   in
   let reference_array name index =
-    let oe = lookup env name in
-    match oe with
-      Some (e, _) ->
-      begin
-        let array_get id tk = match tk with
-            Array inner_tk ->
-            begin
-              let a_index = analyze' index env depth (Some Int) oenc in
-              match (type_kind_of a_index) = Int with
-                true -> ArrayRef (id, a_index, inner_tk)
-              | _ -> raise (SemanticError "type of array index is mismatched")
-            end
-          | _ -> raise (SemanticError "id is not array")
-        in
-        match e with
-          EItem (_, id, tk, depth, _) -> array_get id tk
-        | ETerm (id, tk, depth) -> array_get id tk
-        | _ -> raise (SemanticError "[ice] invalid env kind")
-      end
-    | None -> raise (SemanticError "array id was not found")
+    let array_get id tk = match tk with
+        Array inner_tk ->
+        begin
+          let a_index = analyze' index env depth (Some Int) oenc in
+          match (type_kind_of a_index) = Int with
+            true -> ArrayRef (id, a_index, inner_tk)
+          | _ -> raise (SemanticError "type of array index is mismatched")
+        end
+      | _ -> raise (SemanticError "id is not array")
+    in
+    let arr = analyze' (Id name) env depth None oenc in
+    match arr with
+      IdTerm (id, tk) -> array_get id tk
+    | _ -> raise (SemanticError "[ice] invalid env kind")
   in
 
   match ast with

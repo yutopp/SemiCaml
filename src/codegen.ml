@@ -20,7 +20,7 @@ let m_unit_ty = L.pointer_type i8_ty
 type t_value =
     Normal of L.llvalue
   | Address of L.llvalue
-  | Element of L.llvalue * A.type_kind * int
+  | Element of L.llvalue * A.type_kind * string * int
   | TempFunction of L.llvalue * L.llvalue
   | Function of L.llvalue * int(* Not implemented *) * L.lltype
 
@@ -116,7 +116,7 @@ exception UnexpectedAAst
 let rec to_llvm_ty tk = match tk with
     A.Int -> i32_ty
   | A.String -> (*; void_ty *)raise (UnexpectedType "string")
-  | A.Array itk -> ptr_to_vals_ty
+  | A.Array itk -> L.pointer_type i8_ty
   | A.Func params -> function_bag_ty
   | A.Float -> float_ty
   | A.Boolean -> bool_ty
@@ -130,15 +130,15 @@ exception InvalidOp of string
 exception InvalidType
 exception InvalidValue of string
 
-let get_element v t index =
+let get_element v t id index =
   let p = L.const_in_bounds_gep v [|L.const_int i32_ty index|] in
   let lp = L.build_load p "" builder in
-  L.build_bitcast lp (L.pointer_type t) "" builder
+  L.build_bitcast lp (L.pointer_type t) id builder
 
 let to_ptr_val rv = match rv with
     Normal _ -> raise (InvalidValue "")
   | Address v -> v
-  | Element (v, tk, index) -> get_element v (to_llvm_ty tk) index
+  | Element (v, tk, id, index) -> get_element v (to_llvm_ty tk) id index
   | TempFunction (f, _) -> f
   | Function (v, index, ty) -> v
 
@@ -281,7 +281,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        let set_captured_val (c_id, tk , index) =
          (* Printf.printf "| fun(%s) -> hide id(%s)\n" id c_id;
          flush stdout; *)
-         let e = Element (f_context, tk, index) in
+         let e = Element (f_context, tk, c_id, index) in
          Hashtbl.add val_table c_id e
        in
        List.iter set_captured_val captured_id_tks;
@@ -294,7 +294,6 @@ let rec make_llvm_ir aast ip___ = match aast with
 
        (* Printf.printf "FuncDecl %s\n" id;
        flush stdout; *)
-
        Llvm_analysis.assert_valid_function f;
 
        (* restore ip *)
@@ -435,12 +434,12 @@ let rec make_llvm_ir aast ip___ = match aast with
             gen ret_tk (L.build_call f (Array.of_list e_args) "" builder)
           end
 
-       | Element (v, tk, index) ->
+       | Element (v, tk, c_id, index) ->
           begin
             match tk with
               A.Func params ->
               begin
-                let bag = get_element v (to_llvm_ty tk) index in
+                let bag = get_element v (to_llvm_ty tk) c_id index in
                 let f_ty = make_closure_func_type tk in
                 let f, captured_context = get_fp_and_context bag f_ty in
                 let e_args = [captured_context] @ (List.map seq args) in
@@ -473,7 +472,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        in
        let generic_iv = L.build_bitcast initial_value (L.pointer_type i8_ty) "" builder in
        (* elem 0 of array contains length of it *)
-       let array_p = L.build_call f_new_array [|len; generic_iv|] "" builder in
+       let array_p = L.build_call f_new_array [|len; generic_iv|] "new_array" builder in
        Address (array_p)
      end
 
@@ -481,8 +480,8 @@ let rec make_llvm_ir aast ip___ = match aast with
      begin
        let arr = to_ptr_val (Hashtbl.find val_table id) in
        let index_p = to_ptr_val (make_llvm_ir elem_index ip___) in
-       let index = L.build_load index_p "" builder in
-       let generic_v = L.build_call f_ref_array_elem [|arr; index|] "" builder in
+       let index = L.build_load index_p "arr_index" builder in
+       let generic_v = L.build_call f_ref_array_elem [|arr; index|] "array_ref" builder in
        let v = L.build_bitcast generic_v (L.pointer_type (to_llvm_ty tk)) "" builder in
        Address (v)
      end

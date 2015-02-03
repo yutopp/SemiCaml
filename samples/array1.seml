@@ -1,0 +1,6 @@
+let arr = Array.new int 10;;
+
+let init i = arr.(i) <- i * i;;
+
+init 3;;
+print_int arr.(3);;

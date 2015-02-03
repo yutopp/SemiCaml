@@ -1,0 +1,8 @@
+let arr = Array.new int 10;;
+
+let rec init i = if i = 10 then () else (arr.(i) <- i * i; init (i+1));;
+
+let rec show i = if i = 10 then () else (let v = arr.(i) in (print_int v; print_newline()); show(i+1));;
+
+init 0;;
+show 0;;

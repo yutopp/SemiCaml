@@ -1,0 +1,3 @@
+let arr = Array.new float 10;;
+arr.(2) <- 3.14;;
+print_float arr.(2);;
