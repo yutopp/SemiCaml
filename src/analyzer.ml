@@ -363,8 +363,6 @@ let rec type_kind_of a =
   unwrap_type_kind tk
 
 
-let fun_ret_id id = id ^ ".return_type"
-
 let rec analyze' ast env depth ottk oenc =
   let term_check ast tk ottk = match ottk with
       (* if expected type is specified and actual type is different from expected type, it is error *)
@@ -451,12 +449,6 @@ let rec analyze' ast env depth ottk oenc =
          let id = save_term_item f_env v_name tk inner_depth in
          VarDecl (id, ANone, tk, None)
        in
-       let decl_return_type_var id f_env =
-         (* dummy variable *)
-         let tk = create_type_var () in
-         let id = save_term_item f_env (fun_ret_id id) tk inner_depth in
-         VarDecl (id, ANone, tk, None)
-       in
        let convert_aast_to_tk aast = match aast with
            VarDecl (id, inner, tk, None) -> unwrap_type_kind (find_tk_from_id id)
          | _ -> raise (SemanticError "[ice]")
@@ -467,9 +459,7 @@ let rec analyze' ast env depth ottk oenc =
        in
        let f_env = make_tmp_env env in
        (* for return type *)
-       let new_id = make_new_id name in
-       let ret_dummy_val = decl_return_type_var new_id f_env in
-       let ret_tk = type_kind_of ret_dummy_val in
+       let ret_tk = create_type_var () in
        let incomplete_param_envs = List.map (fun p -> decl_param_var p f_env) params in
        let param_nodes = List.map (fun a -> type_kind_of a) incomplete_param_envs in
        let func_tk = Func (param_nodes @ [ret_tk]) in
@@ -499,7 +489,6 @@ let rec analyze' ast env depth ottk oenc =
        let captured_envs = List.map (fun (_, e) -> e) !captured_depth_and_envs in
        let actual_ret_tk = type_kind_of attr_ast in
        let unified_ret_tk = unify ret_tk actual_ret_tk in
-       ignore (unify (type_kind_of ret_dummy_val) unified_ret_tk);
        let param_tks = List.map convert_aast_to_tk incomplete_param_envs in
        let param_nodes = List.map2 complete_param incomplete_param_envs param_tks in
        let new_func_tk = Func (param_tks @ [unified_ret_tk]) in
