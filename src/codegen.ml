@@ -23,7 +23,6 @@ type t_value =
   | Element of L.llvalue * A.type_kind * int
   | TempFunction of L.llvalue * L.llvalue
   | Function of L.llvalue * int(* Not implemented *) * L.lltype
-  | BuiltinFunction of L.llvalue
 
 let val_table: (string, t_value) Hashtbl.t = Hashtbl.create 10
 
@@ -33,7 +32,6 @@ let to_string tv = match tv with
   | Element _ -> "element"
   | TempFunction _ -> "tmp function"
   | Function _ -> "function"
-  | BuiltinFunction _ -> "BuiltinFunction"
 
 (* *)
 let ptr_to_function_ty =
@@ -107,10 +105,6 @@ let f_new_closure_bag =
   let func_ty = L.function_type (L.pointer_type function_bag_ty) params in
   L.declare_function "_semi_caml_new_closure_bag" func_ty s_module
 
-let f_new_unit =
-  let params = [||] in
-  let func_ty = L.function_type m_unit_ty params in
-  L.declare_function "_semi_caml_new_unit" func_ty s_module
 
 let unit_value = L.const_pointer_null m_unit_ty
 
@@ -124,15 +118,6 @@ let rec to_llvm_ty tk = match tk with
   | A.String -> (*; void_ty *)raise (UnexpectedType "string")
   | A.Array itk -> ptr_to_vals_ty
   | A.Func params -> function_bag_ty
-  | A.IntrinsicFunc params ->
-     begin
-       let rev = List.rev params in
-       let ret_tk = List.hd rev in
-       let ret_ty = L.pointer_type (to_llvm_ty ret_tk) in
-       let param_tk = List.rev (List.tl rev) in
-       let params_ty = List.map (fun ttk -> L.pointer_type (to_llvm_ty ttk)) param_tk in
-       L.function_type ret_ty (Array.of_list params_ty)
-     end
   | A.Float -> float_ty
   | A.Boolean -> bool_ty
   | A.Unit -> i8_ty
@@ -156,7 +141,6 @@ let to_ptr_val rv = match rv with
   | Element (v, tk, index) -> get_element v (to_llvm_ty tk) index
   | TempFunction (f, _) -> f
   | Function (v, index, ty) -> v
-  | BuiltinFunction f -> f
 
 let make_closure_func_type tk =
   let tks = match tk with
@@ -416,10 +400,11 @@ let rec make_llvm_ir aast ip___ = match aast with
 
   | A.CallFunc (id, args, tk) ->
      begin
-       Printf.printf "CallFunc %s %s\n" id (A.to_string tk);
+       Printf.printf "CallFunc %s / returns %s\n" id (A.to_string tk);
+       flush stdout;
+
        let gen tk v = match tk with
            A.Func params_tk -> Function (v, 0, make_closure_func_type tk)
-         | A.IntrinsicFunc params_tk -> BuiltinFunction v
          | _ -> Address v
        in
 
@@ -444,15 +429,9 @@ let rec make_llvm_ir aast ip___ = match aast with
          end
 
        | Function (bag, _, f_ty) ->
-         begin
-           let f, captured_context = get_fp_and_context bag f_ty in
-           let e_args = [captured_context] @ (List.map seq args) in
-           gen tk (L.build_call f (Array.of_list e_args) "" builder)
-         end
-
-       | BuiltinFunction f ->
           begin
-            let e_args = List.map seq args in
+            let f, captured_context = get_fp_and_context bag f_ty in
+            let e_args = [captured_context] @ (List.map seq args) in
             gen tk (L.build_call f (Array.of_list e_args) "" builder)
           end
 
@@ -467,13 +446,6 @@ let rec make_llvm_ir aast ip___ = match aast with
                 let e_args = [captured_context] @ (List.map seq args) in
                 gen tk (L.build_call f (Array.of_list e_args) "" builder)
               end
-
-            | A.IntrinsicFunc params ->
-               begin
-                 let f = get_element v (to_llvm_ty tk) index in
-                 let e_args = List.map seq args in
-                 gen tk (L.build_call f (Array.of_list e_args) "" builder)
-               end
 
             | _ -> raise (InvalidValue (Printf.sprintf "%s is not function (%s)" id (to_string rf)))
           end
@@ -542,38 +514,51 @@ let rec make_llvm_ir_seq aast ip = match aast with
 let compile aast =
   Printf.printf "startllvm\n";
 
-  (* decl intrinsics *)
-  let decl_print_int () =
-    let params = [|m_i32_ty|] in
-    let func_ty = L.function_type m_unit_ty params in
-    let f = L.declare_function "_semi_caml_print_int" func_ty s_module in
-    Hashtbl.add val_table "print_int" (BuiltinFunction f)
-  in
-  decl_print_int();
+  (* decl builtin functions *)
+  let decl_builtin_functions () =
+    let dummy_capture = L.const_array (L.pointer_type i8_ty) [||] in
+    let decl_builtin name f ty =
+      let cp = L.const_bitcast dummy_capture ptr_to_vals_ty in
+      let s = L.const_struct context [|f; cp; (L.const_null ptr_to_vals_ty)|] in
+      let g = L.define_global (name ^ "_v") s s_module in
+      Hashtbl.add val_table name (Function (g, 0, ty))
+    in
 
-  let decl_print_bool () =
-    let params = [|m_bool_ty|] in
-    let func_ty = L.function_type m_unit_ty params in
-    let f = L.declare_function "_semi_caml_print_bool" func_ty s_module in
-    Hashtbl.add val_table "print_bool" (BuiltinFunction f)
-  in
-  decl_print_bool();
+    let decl_print_int () =
+      let params = [|ptr_to_vals_ty; m_i32_ty|] in
+      let func_ty = L.function_type m_unit_ty params in
+      let f = L.declare_function "_semi_caml_print_int" func_ty s_module in
+      decl_builtin "print_int" f func_ty
+    in
 
-  let decl_print_float () =
-    let params = [|m_float_ty|] in
-    let func_ty = L.function_type m_unit_ty params in
-    let f = L.declare_function "_semi_caml_print_float" func_ty s_module in
-    Hashtbl.add val_table "print_float" (BuiltinFunction f)
-  in
-  decl_print_float();
+    let decl_print_bool () =
+      let params = [|ptr_to_vals_ty; m_bool_ty|] in
+      let func_ty = L.function_type m_unit_ty params in
+      let f = L.declare_function "_semi_caml_print_bool" func_ty s_module in
+      decl_builtin "print_bool" f func_ty
+    in
 
-  let decl_print_newline () =
-    let params = [|m_unit_ty|] in
-    let func_ty = L.function_type m_unit_ty params in
-    let f = L.declare_function "_semi_caml_print_newline" func_ty s_module in
-    Hashtbl.add val_table "print_newline" (BuiltinFunction f)
+    let decl_print_float () =
+      let params = [|ptr_to_vals_ty; m_float_ty|] in
+      let func_ty = L.function_type m_unit_ty params in
+      let f = L.declare_function "_semi_caml_print_float" func_ty s_module in
+      decl_builtin "print_float" f func_ty
+    in
+
+    let decl_print_newline () =
+      let params = [|ptr_to_vals_ty; m_unit_ty|] in
+      let func_ty = L.function_type m_unit_ty params in
+      let f = L.declare_function "_semi_caml_print_newline" func_ty s_module in
+      decl_builtin "print_newline" f func_ty
+    in
+
+    decl_print_int();
+    decl_print_bool();
+    decl_print_float();
+    decl_print_newline();
   in
-  decl_print_newline();
+  decl_builtin_functions ();
+  L.dump_module s_module;
 
   let ft = L.function_type void_ty [||] in
   let f = L.declare_function "_semi_caml_entry" ft s_module in

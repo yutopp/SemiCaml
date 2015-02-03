@@ -1,0 +1,3 @@
+let f a b = a + b ;;
+
+let g f a b = f a b;;

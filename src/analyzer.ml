@@ -12,7 +12,6 @@ type type_kind =
   | String
   | Array of type_kind
   | Func of type_kind list
-  | IntrinsicFunc of type_kind list
   | Float
   | Boolean
   | Unit
@@ -25,7 +24,6 @@ let rec to_string tk = match tk with
   | String -> "string"
   | Array inner_tk -> "array<" ^ (to_string inner_tk) ^ ">"
   | Func px -> "fun(" ^ (String.concat " -> " (List.map to_string px)) ^ ")"
-  | IntrinsicFunc params_tk -> "intrinsic function"
   | Float -> "float"
   | Boolean -> "boolean"
   | Unit -> "unit"
@@ -625,10 +623,15 @@ let rec analyze' ast env depth ottk oenc =
          let return_ty = List.nth params (params_len - 1) in
          CallFunc (id, a_args, return_ty)
        in
-       let apply id tk = match tk with
+       let rec apply id tk = match tk with
            Func params -> call_function id params
-         | IntrinsicFunc params -> call_function id params
-         | _ -> raise (SemanticError "function is not callable")
+         | _ ->
+            begin
+              let n_params = List.map (fun x -> create_type_var ()) args in
+              let n_ret = create_type_var () in
+              let fn_type = Func (n_params @ [n_ret]) in
+              apply id fn_type
+            end
        in
        let f = analyze' (Id name) env depth None oenc in
        match f with
@@ -675,10 +678,10 @@ let create_analyzer () =
   (* environment for the module *)
   let env = EModule (Hashtbl.create 10) in
   (* register intrinsic functions to the symbol table *)
-  ignore (save_intrinsic_term_item env "print_int" (IntrinsicFunc [Int; Unit]));
-  ignore (save_intrinsic_term_item env "print_bool" (IntrinsicFunc [Boolean; Unit]));
-  ignore (save_intrinsic_term_item env "print_float" (IntrinsicFunc [Float; Unit]));
-  ignore (save_intrinsic_term_item env "print_newline" (IntrinsicFunc [Unit; Unit]));
+  ignore (save_intrinsic_term_item env "print_int" (Func [Int; Unit]));
+  ignore (save_intrinsic_term_item env "print_bool" (Func [Boolean; Unit]));
+  ignore (save_intrinsic_term_item env "print_float" (Func [Float; Unit]));
+  ignore (save_intrinsic_term_item env "print_newline" (Func [Unit; Unit]));
 
   (env, ref 1)
 
