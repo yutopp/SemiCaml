@@ -1,0 +1,7 @@
+let f a =
+    let a1 = a in
+        let g x y = a + x + y in
+            g;;
+
+let ff = f 10;;
+print_int (ff 1 2)

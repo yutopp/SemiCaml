@@ -251,8 +251,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        match in_clause with
          Some a ->
          begin
-           let n_ip = L.instr_succ (to_ptr_val v) in
-           make_llvm_ir a n_ip
+           make_llvm_ir a ip___
          end
        | None -> v
      end
@@ -280,8 +279,8 @@ let rec make_llvm_ir aast ip___ = match aast with
 
        (* set captured value, hide normal names *)
        let set_captured_val (c_id, tk , index) =
-         (* Printf.printf "| %s -> hide id(%s)\n" id c_id; *)
-         flush stdout;
+         (* Printf.printf "| fun(%s) -> hide id(%s)\n" id c_id;
+         flush stdout; *)
          let e = Element (f_context, tk, index) in
          Hashtbl.add val_table c_id e
        in
@@ -293,8 +292,9 @@ let rec make_llvm_ir aast ip___ = match aast with
        let l_expr = to_ptr_val (make_llvm_ir expr f_ip) in
        ignore (L.build_ret l_expr builder);
 
-       (* Printf.printf "FuncDecl %s\n" id; *)
-       flush stdout;
+       (* Printf.printf "FuncDecl %s\n" id;
+       flush stdout; *)
+
        Llvm_analysis.assert_valid_function f;
 
        (* restore ip *)
@@ -304,10 +304,9 @@ let rec make_llvm_ir aast ip___ = match aast with
        List.iter (fun (id, rk, index) -> Hashtbl.remove val_table id) captured_id_tks;
        List.iter (fun (id, v) -> Hashtbl.add val_table id v) pre_map;
 
+       (* closure bag *)
        let v_fp = L.build_bitcast f (L.pointer_type i8_ty) "f_to_p" builder in
        let len = L.const_int i32_ty (List.length captured_id_tks) in
-
-       (* closure bag *)
        let cl_bag = L.build_call f_new_closure_bag [|v_fp; len|] ("bag_for_" ^ id) builder in
 
        (* capture *)
@@ -334,8 +333,7 @@ let rec make_llvm_ir aast ip___ = match aast with
        match in_clause with
          Some a ->
          begin
-           let n_ip = L.instr_succ inner_bag in
-           make_llvm_ir a n_ip
+           make_llvm_ir a ip___
          end
        | None -> func
      end
@@ -400,8 +398,8 @@ let rec make_llvm_ir aast ip___ = match aast with
   | A.CallFunc (id, args, params_tk, ret_tk) ->
      begin
        let func_tk = A.Func (List.map A.unwrap_type_kind (params_tk @ [ret_tk])) in
-       (* Printf.printf "CallFunc %s / call %s\n" id (A.to_string func_tk); *)
-       flush stdout;
+       (* Printf.printf "CallFunc %s / call %s\n" id (A.to_string func_tk);
+       flush stdout; *)
 
        let gen wtk v =
          let tk = A.unwrap_type_kind wtk in
