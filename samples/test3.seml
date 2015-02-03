@@ -2,7 +2,7 @@ let double n = n *. 2.0 ;;
 
 print_newline() ;;
 
-let rec f n = if n == 0 then () else f (n - 1); print_int n; print_newline();;
+let rec f n = if n = 0 then () else f (n - 1); print_int n; print_newline();;
 
 f 10;;
 
@@ -15,6 +15,6 @@ let rec sum n = if n == 0 then 0 else n + sum (n-1);;
 print_int (sum 10);;
 print_newline();;
 
-print_int (let rec sum1 x = if x == 1 then 1 else x + sum1 (x - 1) in sum1 10);;
+print_int (let rec sum1 x = if x = 1 then 1 else x + sum1 (x - 1) in sum1 10);;
 print_newline();;
  *)
