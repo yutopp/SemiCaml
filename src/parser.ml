@@ -44,12 +44,12 @@ and let_expr_rule tokens = match tokens with
   | _ -> cond_expr_rule tokens
 
 and decl_rule = function
-  | Keyword Let :: Identifier id :: Op Assign :: tail -> begin match expr_rule tail with
+  | Keyword Let :: Identifier id :: Op Equal :: tail -> begin match expr_rule tail with
     | (ast, tail') -> (VerDecl (id, ast, None), tail')
   end
   | Keyword Let :: Keyword Rec :: Identifier id :: tail -> begin match ids_rule tail with
     | (ids, tail') -> begin match tail' with
-      | Op Assign :: tail'' -> begin match expr_rule tail'' with
+      | Op Equal :: tail'' -> begin match expr_rule tail'' with
         | (ast, tail''') -> (FuncDecl (true, id, ids, ast, None), tail''')
       end
       | _ -> failwith "'=' expected"
@@ -57,7 +57,7 @@ and decl_rule = function
   end
   | Keyword Let :: Identifier id :: tail -> begin match ids_rule tail with
     | (ids, tail') -> begin match tail' with
-      | Op Assign :: tail'' -> begin match expr_rule tail'' with
+      | Op Equal :: tail'' -> begin match expr_rule tail'' with
         | (ast, tail''') -> (FuncDecl (false, id, ids, ast, None), tail''')
       end
       | _ -> failwith "'=' expected"
@@ -107,8 +107,11 @@ and logic_and_expr_rule tokens = match equal_expr_rule tokens with
 
 and equal_expr_rule tokens = match comp_expr_rule tokens with
   | (ast, tail) -> begin match tail with
-    | Op Equal :: tail' -> begin match equal_expr_rule tail' with
+    | Op Equal :: tail' -> begin match comp_expr_rule tail' with
       | (ast', tail'') -> (EqualExpr (ast, ast'), tail'')
+    end
+    | Op NotEqual :: tail' -> begin match comp_expr_rule tail' with
+      | (ast', tail'') -> (NotEqualExpr (ast, ast'), tail'')
     end
     | _ -> (ast, tail)
   end

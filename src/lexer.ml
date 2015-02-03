@@ -45,10 +45,9 @@ let rec state_start tokens input = match input with
   | '|' :: '|' :: tail -> state_start (Op Or :: tokens) tail
   | '&' :: '&' :: tail -> state_start (Op And :: tokens) tail
 
-  | '=' :: '=' :: tail -> state_start (Op Equal :: tokens) tail
-  | '!' :: '=' :: tail -> state_start (Op NotEqual :: tokens) tail
+  | '='        :: tail -> state_start (Op Equal :: tokens) tail
+  | '<' :: '>' :: tail -> state_start (Op NotEqual :: tokens) tail
 
-  | '=' ::        tail -> state_start (Op Assign :: tokens) tail
   | '<' :: '-' :: tail -> state_start (Op ArrayAssign :: tokens) tail
 
   | '<' :: '=' :: tail -> state_start (Op LessEqual :: tokens) tail

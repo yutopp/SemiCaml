@@ -13,38 +13,7 @@ int main()
 
 extern "C"
 {
-    auto _semi_caml_print_int( std::int32_t const* const v )
-        -> void*
-    {
-        std::cout << *v;
-
-        return nullptr;
-    }
-
-    auto _semi_caml_print_bool( bool const* const v )
-        -> void*
-    {
-        std::cout << (*v ? "true" : "false");
-
-        return nullptr;
-    }
-
-    auto _semi_caml_print_float( float const* const v )
-        -> void*
-    {
-        std::cout << *v;
-
-        return nullptr;
-    }
-
-    auto _semi_caml_print_newline( void* )
-        -> void*
-    {
-        std::cout << std::endl;
-
-        return nullptr;
-    }
-
+    // core runtime
 
     // TODO: memory management
     using holder_t = void*;
@@ -129,9 +98,39 @@ extern "C"
         return new closure_bag_t( b );
     }
 
-    auto _semi_caml_new_unit()
-        -> holder_t*
+
+    //
+    // builtin functions
+    //
+    auto _semi_caml_print_int( holder_t*, std::int32_t const* const v )
+        -> void*
     {
+        std::cout << *v;
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_bool( holder_t*, bool const* const v )
+        -> void*
+    {
+        std::cout << (*v ? "true" : "false");
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_float( holder_t*, float const* const v )
+        -> void*
+    {
+        std::cout << *v;
+
+        return nullptr;
+    }
+
+    auto _semi_caml_print_newline( holder_t*, void* )
+        -> void*
+    {
+        std::cout << std::endl;
+
         return nullptr;
     }
 }
