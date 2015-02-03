@@ -105,7 +105,7 @@ let lookup x env =
        try
          Hashtbl.find val_table x_
        with
-       | Not_found -> failwith ("undefined variable " ^ x)
+       | Not_found -> failwith "undefined variable"
      end
   | _ -> failwith ("Hashtbl.find other \"Not_found\" exception with" ^ x)
 
@@ -204,14 +204,16 @@ let rec eval' input rec_depth =
      eval' e2 rec_depth
   | FuncDecl (id,args,e1,t,_,None) ->
      let arg_ids = List.map Analyzer.get_id_of args in
-     let id_ = delete_num_in_str id in
+     let id_ = delete_num_in_str id in     
      lookup id_ (env_ext val_table id_ (FunVal (id_, arg_ids, e1, t)))
   | FuncDecl (id,args,e1,t,_,Some e2) ->
      let arg_ids = List.map Analyzer.get_id_of args in
-     (env_ext val_table id (FunVal (id, arg_ids, e1, t)));
+     let id_ = add_depth_to_id id rec_depth in
+     (env_ext val_table id_ (FunVal (id_, arg_ids, e1, t)));
      eval' e2 rec_depth
   | CallFunc (id,call_args,_) ->
-     let func = lookup id val_table in
+     let id_ = id ^ ".0" in
+     let func = lookup id_ val_table in
      let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
      begin
        match func with
@@ -249,7 +251,7 @@ let rec eval' input rec_depth =
                UnitVal
             | _ -> failwith "not march args type"
           end
-       | TopVarVal (id,value,_) ->
+       | TopVarVal (id_,value,_) ->
           value
        | _ -> failwith "func value is expected"
      end
