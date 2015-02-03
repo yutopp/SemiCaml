@@ -26,7 +26,6 @@ let repl () =
   repl' ()
 
 let build filename =
-  print_string "\\SemiCaml/";
   print_string "mean mean\n";
   let in_channel = open_in filename in
   let chars = char_list_of_in_channel in_channel in
