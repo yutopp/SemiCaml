@@ -579,6 +579,35 @@ let suite =
                                                                   [UnitLiteral]))))], []),
                                              "let f x = let a = x in let g = a + 10 in g ;;
                                               let p = f 10 in print_int p; print_newline ();;";
+                                             
+                                             "10",
+                                             (Program [
+                                                  FuncDecl (
+                                                      false,
+                                                      "p",
+                                                      ["x"],
+                                                      FuncDecl (
+                                                          false,
+                                                          "f",
+                                                          ["a"],
+                                                          FuncCall (
+                                                              "print_int",
+                                                              [Id "a"]),
+                                                          Some (
+                                                              Id "f")),
+                                                      None);
+                                                  VerDecl (
+                                                      "f",
+                                                      FuncCall (
+                                                          "p",
+                                                          [IntLiteral 10]),
+                                                      Some (
+                                                          FuncCall (
+                                                              "f",
+                                                              [IntLiteral 10])))], []),
+                                             "let p x = let f a = print_int a in f;;
+
+                                              let f = p 10 in f 10;;"
                                             ]);]
 
 let run_test = run_test_tt_main suite
