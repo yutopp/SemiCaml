@@ -194,9 +194,9 @@ let rec eval' input rec_depth =
      let arg_ids = List.map Analyzer.get_id_of args in
      (env_ext val_table id (FunVal (id, arg_ids, e1, t)));
      eval' e2 rec_depth
-  | CallFunc (id,call_args,_) ->
+  | CallFunc (id,call_args,_,_) ->
      let func = lookup id val_table in
-     let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in     
+     let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
      begin
        match func with
        | FunVal (_,pro_args,e1,_) ->
