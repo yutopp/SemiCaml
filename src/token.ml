@@ -2,7 +2,7 @@ type opcode =
   | DoubleSemicolon | Semicolon
   | Or | And
   | Equal | NotEqual
-  | Assign | ArrayAssign
+  | ArrayAssign
   | LessEqual| GreaterEqual | Less | Greater
   | AddFloat | AddInt | SubFloat | SubInt
   | MulFloat | MulInt | DivFloat | DivInt

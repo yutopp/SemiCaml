@@ -15,7 +15,7 @@ let suite =
                                       "1 + 1";
 
                                       "2",
-                                      [Keyword Let; Identifier "x"; Op Assign; IntLiteral 3],
+                                      [Keyword Let; Identifier "x"; Op Equal; IntLiteral 3],
                                       "let x = 3";
 
                                       "3",
@@ -23,7 +23,7 @@ let suite =
                                       "Array.new int 3";
 
                                       "4",
-                                      [Keyword Let; Keyword Rec; Identifier "fib"; Identifier "n"; Op Assign; Identifier "n"],
+                                      [Keyword Let; Keyword Rec; Identifier "fib"; Identifier "n"; Op Equal; Identifier "n"],
                                       "let rec fib n = n";
 
                                       "5",
@@ -33,6 +33,14 @@ let suite =
                                       "6",
                                       [Identifier "hoge"; Identifier "piyo"],
                                       "hoge(* comment *)piyo";
+
+                                      "7",
+                                      [IntLiteral 1; Op Equal; IntLiteral 2],
+                                      "1 = 2";
+
+                                      "8",
+                                      [IntLiteral 1; Op NotEqual; IntLiteral 2],
+                                      "1 <> 2";
                                      ]);
 
                 (* "perser test"; *)
@@ -295,7 +303,7 @@ let suite =
 
                                                 "2",
                                                 (EqualExpr (IntLiteral 1, IntLiteral 2), []),
-                                                "1 == 2"
+                                                "1 = 2";
                                                ]);
 
                 "logic_and_expr_rule test" >::: (List.map
@@ -491,8 +499,8 @@ let suite =
                                                                                 AddIntExpr (FuncCall ("fib", [SubIntExpr (Id "n", IntLiteral 1)]), FuncCall("fib", [SubIntExpr (Id "n", IntLiteral 2)])))), None);
                                                   FuncCall ("fib", [IntLiteral 10])], []),
                                              "let rec fib n =
-                                              if n == 0 then 0
-                                              else if n == 1 then 1
+                                              if n = 0 then 0
+                                              else if n = 1 then 1
                                               else fib (n - 1) + fib (n - 2);;
 
                                               fib 10";
@@ -526,7 +534,7 @@ let suite =
                                                                        Id "n",
                                                                        IntLiteral 1)])),
                                                           None)], []),
-                                             "let rec f n = if n == 0 then () else f (n - 1);;";
+                                             "let rec f n = if n = 0 then () else f (n - 1);;";
 
                                              "7",
                                              (Program [
