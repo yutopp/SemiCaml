@@ -35,16 +35,18 @@ let rec rustic_val_to_str values = match values with
      begin
        try
          let name_ = delete_num_in_str name in
+         let wrap_tks = List.map Analyzer.unwrap_type_kind types in
          Printf.sprintf
            "%s : %s"
            name_
-           (recursive_to_string types Analyzer.to_string " -> ")
+           (recursive_to_string wrap_tks Analyzer.to_string " -> ")
        with
        | Not_found ->
+          let wrap_tks = List.map Analyzer.unwrap_type_kind types in
           Printf.sprintf
             "%s : %s"
             name
-            (recursive_to_string types Analyzer.to_string " -> ")
+            (recursive_to_string wrap_tks Analyzer.to_string " -> ")
        | _ -> failwith "not allow id"
      end
   | UnitVal -> "()"
@@ -205,18 +207,18 @@ let rec eval' input rec_depth =
   | FuncDecl (id,args,e1,t,_,None) ->
      let arg_ids = List.map Analyzer.get_id_of args in
      let id_ = delete_num_in_str id in     
-     lookup id_ (env_ext val_table id_ (FunVal (id_, arg_ids, e1, t)))
+     lookup id_ (env_ext val_table id_ (FunVal (id_, arg_ids, e1, unwrap_type_kind t)))
   | FuncDecl (id,args,e1,t,_,Some e2) ->
      let arg_ids = List.map Analyzer.get_id_of args in
      let id_ = add_depth_to_id id rec_depth in
-     (env_ext val_table id_ (FunVal (id_, arg_ids, e1, t)));
+     (env_ext val_table id_ (FunVal (id_, arg_ids, e1, unwrap_type_kind t)));
      eval' e2 rec_depth
   | CallFunc (id,call_args,_,_) ->
      let id_ = id ^ ".0" in
      let func = lookup id_ val_table in
      let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
      begin
-       match func with
+       match func with          
        | FunVal (_,pro_args,e1,_) ->
           let recursive_add =
             if !parent_func = id
@@ -227,7 +229,8 @@ let rec eval' input rec_depth =
           parent_func := id;
           let ex_pro_args = List.map (fun arg -> add_depth_to_id
                                                    arg
-                                                   (rec_depth + recursive_add)) pro_args  in
+                                                   (rec_depth + recursive_add)) pro_args
+          in
           ignore (List.map2 (fun x v -> env_ext val_table x v)
                             ex_pro_args
                             evaled_args);
@@ -251,9 +254,10 @@ let rec eval' input rec_depth =
                UnitVal
             | _ -> failwith "not march args type"
           end
-       | TopVarVal (id_,value,_) ->
-          value
-       | _ -> failwith "func value is expected"
+       | otherwise ->
+          print_string (val_to_str otherwise);
+          print_newline ();
+          failwith "func value is expected"
      end
   | ArrayCreate (size,t) ->
      begin
