@@ -1,3 +1,5 @@
 let f a b = a + b ;;
 
-let g f a b = f a b;;
+let g ff a b = ff a b;;
+
+let i = g f 1 2 in print_int i;;

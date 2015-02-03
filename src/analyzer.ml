@@ -302,7 +302,7 @@ type a_ast =
   | Term of ast * type_kind
   | BinOp of a_ast * a_ast * operator * type_kind
   | Cond of a_ast * a_ast * a_ast
-  | CallFunc of string * a_ast list * type_kind
+  | CallFunc of string * a_ast list * type_kind list * type_kind
   | ArrayCreate of a_ast * type_kind
   | ArrayRef of string * a_ast * type_kind
   | ArrayAssign of string * a_ast * a_ast * type_kind
@@ -318,7 +318,7 @@ let get_id_of a = match a with
   | Term _ -> raise (UnexpectedAttributedAST "Term")
   | BinOp _ -> raise (UnexpectedAttributedAST "BinOp")
   | Cond _ -> raise (UnexpectedAttributedAST "Cond")
-  | CallFunc (id, _, _) -> id
+  | CallFunc (id, _, _, _) -> id
   | ArrayCreate _ -> raise (UnexpectedAttributedAST "ArrayCreate")
   | ArrayRef _ -> raise (UnexpectedAttributedAST "ArrayRef")
   | ArrayAssign _ -> raise (UnexpectedAttributedAST "ArrayAssign")
@@ -348,7 +348,7 @@ let rec type_kind_of a =
     | Term (_, tk) -> tk
     | BinOp (_, _, _, tk) -> tk
     | Cond (cond, a, b) -> type_kind_of a
-    | CallFunc (_, _, tk) -> tk
+    | CallFunc (_, _, _, ret_tk) -> ret_tk
     | ArrayCreate (_, tk) -> tk
     | ArrayRef (_, _, tk) -> tk
     | ArrayAssign (_, _, _, tk) -> tk
@@ -621,7 +621,7 @@ let rec analyze' ast env depth ottk oenc =
          in
          let a_args = List.mapi eval_arg args in
          let return_ty = List.nth params (params_len - 1) in
-         CallFunc (id, a_args, return_ty)
+         CallFunc (id, a_args, List.rev (List.tl (List.rev params)), return_ty)
        in
        let rec apply id tk = match tk with
            Func params -> call_function id params

@@ -64,14 +64,17 @@ let suite =
                                                      CallFunc (
                                                          "print_int",
                                                          [Term (IntLiteral 1, Int)],
+                                                         [Int],
                                                          Unit),
                                                      CallFunc (
                                                          "print_int",
                                                          [Term (IntLiteral 2, Int)],
+                                                         [Int],
                                                          Unit)),
                                                  CallFunc (
                                                      "print_int",
                                                      [Term (IntLiteral 3, Int)],
+                                                     [Int],
                                                      Unit))]),
                                         (Program [
                                              Sequence (

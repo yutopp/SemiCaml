@@ -54,12 +54,12 @@ let function_bag_ty =
                  |]
 
 let get_fp_and_context bag f_ty =
-   let fpp = L.build_in_bounds_gep bag [|L.const_int i32_ty 0; L.const_int i32_ty 0|] "" builder in
-   let rf = L.build_load fpp "" builder in
-   let f = L.build_pointercast rf (L.pointer_type f_ty) "" builder in
+   let fpp = L.build_in_bounds_gep bag [|L.const_int i32_ty 0; L.const_int i32_ty 0|] "fp" builder in
+   let rf = L.build_load fpp "raw_f" builder in
+   let f = L.build_pointercast rf (L.pointer_type f_ty) "f" builder in
 
    let captured_ptrs = L.build_in_bounds_gep bag [|L.const_int i32_ty 0; L.const_int i32_ty 1|] "" builder in
-   let captured_context = L.build_load captured_ptrs "" builder in
+   let captured_context = L.build_load captured_ptrs "c_cont" builder in
    (f, captured_context)
 
 
@@ -398,9 +398,10 @@ let rec make_llvm_ir aast ip___ = match aast with
        Address phi
      end
 
-  | A.CallFunc (id, args, tk) ->
+  | A.CallFunc (id, args, params_tk, ret_tk) ->
      begin
-       Printf.printf "CallFunc %s / returns %s\n" id (A.to_string tk);
+       let func_tk = A.Func (params_tk @ [ret_tk]) in
+       Printf.printf "CallFunc %s / call %s\n" id (A.to_string func_tk);
        flush stdout;
 
        let gen tk v = match tk with
@@ -425,14 +426,14 @@ let rec make_llvm_ir aast ip___ = match aast with
          begin
            (* this context may be appeared at the recursive function *)
            let e_args = [context] @ (List.map seq args) in
-           gen tk (L.build_call f (Array.of_list e_args) "" builder)
+           gen func_tk (L.build_call f (Array.of_list e_args) "" builder)
          end
 
        | Function (bag, _, f_ty) ->
           begin
             let f, captured_context = get_fp_and_context bag f_ty in
             let e_args = [captured_context] @ (List.map seq args) in
-            gen tk (L.build_call f (Array.of_list e_args) "" builder)
+            gen func_tk (L.build_call f (Array.of_list e_args) "" builder)
           end
 
        | Element (v, tk, index) ->
@@ -444,10 +445,19 @@ let rec make_llvm_ir aast ip___ = match aast with
                 let f_ty = make_closure_func_type tk in
                 let f, captured_context = get_fp_and_context bag f_ty in
                 let e_args = [captured_context] @ (List.map seq args) in
-                gen tk (L.build_call f (Array.of_list e_args) "" builder)
+                gen func_tk (L.build_call f (Array.of_list e_args) "" builder)
               end
 
-            | _ -> raise (InvalidValue (Printf.sprintf "%s is not function (%s)" id (to_string rf)))
+            | _ -> raise (InvalidValue (Printf.sprintf "%s is not function [elem] (%s)" id (to_string rf)))
+          end
+
+       | Address v ->
+          begin
+            let bag = L.build_bitcast v (L.pointer_type function_bag_ty) "" builder in
+            L.dump_value bag;
+            let f, captured_context = get_fp_and_context bag (make_closure_func_type func_tk) in
+            let e_args = [captured_context] @ (List.map seq args) in
+            gen func_tk (L.build_call f (Array.of_list e_args) "" builder)
           end
 
        | _ -> raise (InvalidValue (Printf.sprintf "%s is not function (%s)" id (to_string rf)))
