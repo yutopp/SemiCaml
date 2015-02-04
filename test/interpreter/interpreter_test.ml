@@ -367,7 +367,7 @@ let suite =
                                                           [Id "p"]),
                                                       FuncCall (
                                                           "print_newline",
-                                                          [UnitLiteral]))))]);                                     
+                                                          [UnitLiteral]))))]);
                                     ]);
                 "interpreter test" >::: (List.map
                                            (fun (title,res,arg) ->
@@ -559,7 +559,6 @@ let suite =
                                                              [IntLiteral 3;
                                                               IntLiteral 3])))]);
 
-                                            
                                            ]);
                ]
 
