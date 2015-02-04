@@ -407,15 +407,25 @@ let rec analyze' ast env depth ottk oenc =
     | _ -> raise (SemanticError "[ice] invalid env kind")
   in
   let reference_array name index =
-    let array_get id tk = match tk with
+    let rec array_get id tk = match tk with
         Array inner_tk ->
         begin
           let a_index = analyze' index env depth (Some Int) oenc in
-          match (type_kind_of a_index) = Int with
+          let index_tk = (type_kind_of a_index) in
+          match index_tk = Int with
             true -> ArrayRef (id, a_index, inner_tk)
-          | _ -> raise (SemanticError "type of array index is mismatched")
+          | _ -> raise (SemanticError (Printf.sprintf"type of array index is mismatched - %s" (to_string index_tk)))
         end
-      | _ -> raise (SemanticError "id is not array")
+
+      | TypeVar ri ->
+         begin
+           (* prepare array type for type inference *)
+           let inner_tk = create_type_var () in
+           let array_tk = Array inner_tk in
+           array_get id array_tk
+         end
+
+      | _ -> raise (SemanticError (Printf.sprintf "id is not array - %s" (to_string tk)))
     in
     let arr = analyze' (Id name) env depth None oenc in
     match arr with
@@ -593,9 +603,12 @@ let rec analyze' ast env depth ottk oenc =
          ArrayRef (id, a_index, inner_tk) ->
          begin
            let a_value = analyze' expr env depth (Some inner_tk) oenc in
-           match (type_kind_of a_value) = inner_tk with
+           let expr_tk = type_kind_of a_value in
+           let new_tk = unify inner_tk expr_tk in
+           let unwrapped_inner_tk = unwrap_type_kind inner_tk in
+           match new_tk = unwrapped_inner_tk with
              true -> ArrayAssign (id, a_index, a_value, Unit)
-           | _ -> raise (SemanticError "type of rhs of array is mismatched")
+           | _ -> raise (SemanticError (Printf.sprintf "type of rhs of array is mismatched / %s <> %s" (to_string new_tk) (to_string unwrapped_inner_tk)))
          end
        | _ -> raise (SemanticError "ice")
      end

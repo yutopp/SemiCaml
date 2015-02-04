@@ -1,7 +1,8 @@
-let rec init_array arr i n = if i = n then () else (arr.(i) <- i * i; init (i+1));;
+let rec init_array arr i n = if i = n then () else (arr.(i) <- i * i; init_array arr (i+1) n);;
 
-let rec show_array arr i n = if i = n then () else (let v = arr.(i) in (print_int v; print_newline()); show(i+1));;
+let rec show_array arr i n = if i = n then () else (let v = arr.(i) in (print_int v; print_newline()); show_array arr (i+1) n);;
 
-let arr = Array.new int 5 in
-    init_array arr 0 5;
-    show_array arr 0 n;;
+let n = 3 in
+    let arr = Array.new int n in
+        init_array arr 0 n;
+        show_array arr 0 n;;
