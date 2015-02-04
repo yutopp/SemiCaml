@@ -107,7 +107,7 @@ let lookup x env =
        try
          Hashtbl.find val_table x_
        with
-       | Not_found -> failwith "undefined variable"
+       | Not_found -> failwith ("undefined variable " ^ x)
      end
   | _ -> failwith ("Hashtbl.find other \"Not_found\" exception with" ^ x)
 
@@ -213,51 +213,64 @@ let rec eval' input rec_depth =
      let id_ = add_depth_to_id id rec_depth in
      (env_ext val_table id_ (FunVal (id_, arg_ids, e1, unwrap_type_kind t)));
      eval' e2 rec_depth
-  | CallFunc (id,call_args,_,_) ->
-     let id_ = id ^ ".0" in
-     let func = lookup id_ val_table in
-     let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
+  | CallFunc (e1,call_args) ->
      begin
-       match func with          
-       | FunVal (_,pro_args,e1,_) ->
-          let recursive_add =
-            if !parent_func = id
-            then 1
-            else 0
-          in
-          let parent_func_tmp = !parent_func in
-          parent_func := id;
-          let ex_pro_args = List.map (fun arg -> add_depth_to_id
-                                                   arg
-                                                   (rec_depth + recursive_add)) pro_args
-          in
-          ignore (List.map2 (fun x v -> env_ext val_table x v)
-                            ex_pro_args
-                            evaled_args);
-          let result = eval' e1 (rec_depth + recursive_add) in
-          parent_func := parent_func_tmp;
-          result
-       | IntrinsicFunVal _ ->
+       match e1 with
+       | IdTerm (id,t) ->
+          let id_ = id ^ ".0" in
+          let func = lookup id_ val_table in
+          let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
           begin
-            match (id, evaled_args) with
-            | ("print_int", [IntVal n]) ->
-               print_int n;
-               UnitVal
-            | ("print_float", [FloatVal r]) ->
-               print_float r;
-               UnitVal
-            | ("print_bool", [BoolVal b]) ->
-               Printf.printf "%b" b;
-               UnitVal
-            | ("print_newline", [UnitVal]) ->
+            match func with          
+            | FunVal (_,pro_args,e1,_) ->
+               let recursive_add =
+                 if !parent_func = id
+                 then 1
+                 else 0
+               in
+               let parent_func_tmp = !parent_func in
+               parent_func := id;
+               let ex_pro_args = List.map (fun arg -> add_depth_to_id
+                                                        arg
+                                                        (rec_depth + recursive_add)) pro_args
+               in
+               ignore (List.map2 (fun x v -> env_ext val_table x v)
+                                 ex_pro_args
+                                 evaled_args);
+               let result = eval' e1 (rec_depth + recursive_add) in
+               parent_func := parent_func_tmp;
+               result
+            | IntrinsicFunVal _ ->               
+               begin
+                 match (id, evaled_args) with
+                 | ("print_int", [IntVal n]) ->
+                    print_int n;
+                    UnitVal
+                 | ("print_float", [FloatVal r]) ->
+                    print_float r;
+                    UnitVal
+                 | ("print_bool", [BoolVal b]) ->
+                    Printf.printf "%b" b;
+                    UnitVal
+                 | ("print_newline", [UnitVal]) ->
+                    print_newline ();
+                    UnitVal
+                 | (_, [FunVal _]) -> failwith "This is function value call with intrinsic function"
+                 | (_, [TopVarVal _]) -> failwith "Tihs is Toplevel variable call with intrinsic function"
+                 | (func_name, args) ->
+                    print_string "hoge\n";
+                    let new_func = lookup func_name val_table in
+                    print_string func_name;
+                    print_string (val_to_str new_func);
+                    env_ext val_table func_name new_func;
+                    eval' (CallFunc(IdTerm(func_name, t), call_args)) rec_depth
+               end
+            | otherwise ->
+               print_string (val_to_str otherwise);
                print_newline ();
-               UnitVal
-            | _ -> failwith "not march args type"
+               failwith "func value is expected"
           end
-       | otherwise ->
-          print_string (val_to_str otherwise);
-          print_newline ();
-          failwith "func value is expected"
+       | _ -> failwith "not expected type"
      end
   | ArrayCreate (size,t) ->
      begin
