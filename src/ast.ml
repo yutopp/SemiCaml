@@ -98,10 +98,18 @@ let rec dump ?(offset=0) a =
   | IntLiteral v -> Printf.printf "%d" v
   | FloatLiteral v -> Printf.printf "%f" v
   | BoolLiteral v -> Printf.printf "%b" v
-  | FuncCall(name, args) -> (
-    Printf.printf "invoke[%s]( " name;
-    List.iter (fun x -> dump ~offset:(offset+1) x; Printf.printf ", ") args;
-    Printf.printf ")";
-  )
+  | UnitLiteral -> Printf.printf "()"
+
+  | FuncCall(name, args) ->
+     begin
+       Printf.printf "invoke[%s]( " name;
+       List.iter (fun x -> dump ~offset:(offset+1) x; Printf.printf ", ") args;
+       Printf.printf ")";
+     end
+
   | Id name -> Printf.printf "ID(%s)" name
+  | ArrayNew (ty, index) -> Printf.printf "Array.new %s (" ty; dump index; Printf.printf ")"
+  | ArrayGet (name, index) -> Printf.printf "%s.(" name; dump index; Printf.printf ")"
+  | ArrayAssign (name, index, expr) -> Printf.printf "%s.(" name; dump index; Printf.printf ") <- "; dump expr
+  | Sequence (e1, e2) -> dump e1; Printf.printf "; "; dump e2
   | _ -> Printf.printf "%sNot supported\n" off_s
