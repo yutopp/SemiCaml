@@ -133,4 +133,22 @@ extern "C"
 
         return nullptr;
     }
+
+    auto _semi_caml_read_int( holder_t*, void* )
+        -> std::int32_t*
+    {
+        std::int32_t v;
+        std::cin >> v;
+
+        return  _semi_caml_new_int32( v );
+    }
+
+    auto _semi_caml_read_float( holder_t*, void* )
+        -> float*
+    {
+        float v;
+        std::cin >> v;
+
+        return  _semi_caml_new_float( v );
+    }
 }

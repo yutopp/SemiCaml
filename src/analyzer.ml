@@ -689,6 +689,8 @@ let create_analyzer () =
   ignore (save_intrinsic_term_item env "print_bool" (Func [Boolean; Unit]));
   ignore (save_intrinsic_term_item env "print_float" (Func [Float; Unit]));
   ignore (save_intrinsic_term_item env "print_newline" (Func [Unit; Unit]));
+  ignore (save_intrinsic_term_item env "read_int" (Func [Unit; Int]));
+  ignore (save_intrinsic_term_item env "read_float" (Func [Unit; Float]));
 
   (env, ref 1)
 

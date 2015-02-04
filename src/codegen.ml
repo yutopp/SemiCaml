@@ -558,10 +558,27 @@ let compile aast =
       decl_builtin "print_newline" f func_ty
     in
 
+    let decl_read_int () =
+      let params = [|ptr_to_vals_ty; m_unit_ty|] in
+      let func_ty = L.function_type m_i32_ty params in
+      let f = L.declare_function "_semi_caml_read_int" func_ty s_module in
+      decl_builtin "read_int" f func_ty
+    in
+
+    let decl_read_float () =
+      let params = [|ptr_to_vals_ty; m_unit_ty|] in
+      let func_ty = L.function_type m_float_ty params in
+      let f = L.declare_function "_semi_caml_read_float" func_ty s_module in
+      decl_builtin "read_float" f func_ty
+    in
+
     decl_print_int();
     decl_print_bool();
     decl_print_float();
     decl_print_newline();
+
+    decl_read_int();
+    decl_read_float();
   in
   decl_builtin_functions ();
 

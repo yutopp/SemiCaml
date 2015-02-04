@@ -1,4 +1,4 @@
-let rec init_array arr i n = if i = n then () else (arr.(i) <- i * i; init_array arr (i+1) n);;
+let rec init_array arr i n = if i = n then () else (let input = read_int () in arr.(i) <- input; init_array arr (i+1) n);;
 
 let rec show_array arr i n = if i = n then () else (let v = arr.(i) in (print_int v; print_newline()); show_array arr (i+1) n);;
 
