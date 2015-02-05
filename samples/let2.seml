@@ -1,0 +1,16 @@
+let int_printer x = print_newline (print_int x);;
+  
+let f g x y = g x y + g x y;;
+
+let add x y = x + y;;
+  
+int_printer (f add 3 3);;
+          
+let h f = f 2 3 * f 2 5;;
+
+int_printer (h add);;
+
+let add x y = y + y + x + x;;
+
+int_printer (h add);;
+
