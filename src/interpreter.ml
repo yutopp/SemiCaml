@@ -8,7 +8,7 @@ type value =
   | ArrayVal of value array * Analyzer.type_kind
   | TopVarVal of string * value * Analyzer.type_kind
   | FunVal of string * string list * Analyzer.a_ast * Analyzer.type_kind
-  | IntrinsicFunVal of Analyzer.type_kind list
+  | IntrinsicFunVal of string * Analyzer.type_kind list
   | UnitVal
 
 let rec recursive_to_string list printer delimiter =
@@ -21,6 +21,19 @@ let delete_num_in_str id =
   let dot_pos = String.index id '.' in
   let erase_num_id = String.sub id 0 dot_pos in
   erase_num_id
+
+let rdelete_num_in_str id =
+  let dot_pos = String.rindex id '.' in
+  let erase_num_id = String.sub id 0 dot_pos in
+  erase_num_id
+
+let get_rec_number id =
+  let dot_pos = String.rindex id '.' in
+  int_of_string (String.sub id (dot_pos + 1) 1)
+
+let add_depth_to_id id depth =
+  id ^ "." ^ string_of_int depth
+
 
 let rec rustic_val_to_str values = match values with
   | IntVal n -> Printf.sprintf "%d" n
@@ -85,6 +98,11 @@ let rec val_to_str values = match values with
        | _ -> failwith "not allow id"
      end
   | UnitVal -> Printf.sprintf "- : unit = ()"
+  | IntrinsicFunVal (id,types) ->
+     Printf.sprintf
+       " %s : %s = <fun>"
+       id
+       (recursive_to_string types Analyzer.to_string " -> ")
   | _ -> failwith "Undefined Value"
 
 type constant_folder = {
@@ -97,27 +115,29 @@ let val_table: (string, value) Hashtbl.t = Hashtbl.create 10
 
 let env_ext env x v = Hashtbl.add val_table x v
 
-let lookup x env =
+let rec lookup x env =
   try
     Hashtbl.find val_table x
   with
   | Not_found ->
      begin
-       let x_ = delete_num_in_str x in
-       try
-         Hashtbl.find val_table x_
-       with
-       | Not_found -> failwith ("undefined variable " ^ x)
+       let rec_num = get_rec_number x in
+       begin
+         match rec_num with
+         | 0 -> failwith ("undefined variable " ^ x)
+         | _ ->
+            let x_ = add_depth_to_id (rdelete_num_in_str x) (rec_num - 1) in
+            lookup x_ env
+       end
      end
-  | _ -> failwith ("Hashtbl.find other \"Not_found\" exception with" ^ x)
 
 let parent_func = ref "top_level"
 
 let intrinsic_func =
-  ignore(env_ext val_table "print_int" (IntrinsicFunVal [Int;Unit]));
-  ignore(env_ext val_table "print_float" (IntrinsicFunVal [Float;Unit]));
-  ignore(env_ext val_table "print_bool" (IntrinsicFunVal [Boolean;Unit]));
-  ignore(env_ext val_table "print_newline" (IntrinsicFunVal [Unit;Unit]))
+  ignore(env_ext val_table "print_int.0" (IntrinsicFunVal ("print_int",[Int;Unit])));
+  ignore(env_ext val_table "print_float.0" (IntrinsicFunVal ("print_float",[Float;Unit])));
+  ignore(env_ext val_table "print_bool.0" (IntrinsicFunVal ("print_bool",[Boolean;Unit])));
+  ignore(env_ext val_table "print_newline.0" (IntrinsicFunVal ("print_newline",[Unit;Unit])))
 
 let rec eval' input rec_depth =
   let intop f e1 e2 = match (eval' e1 rec_depth, eval' e2 rec_depth) with
@@ -138,7 +158,6 @@ let rec eval' input rec_depth =
     | (BoolVal b1, BoolVal b2) -> BoolVal (f.bool b1 b2)
     | _ -> failwith "bool value is expected"
   in
-  let add_depth_to_id id depth = id ^ "." ^ string_of_int depth in
   let eq = { int = ( = ); float = ( = ); bool = ( = ) } in
   let neq = { int = ( <> ); float = ( <> ); bool = ( <> ) } in
   let lt = { int = ( < ); float = ( < ); bool = ( < ) } in
@@ -198,15 +217,23 @@ let rec eval' input rec_depth =
        | x -> x
      end
   | VarDecl (id,e1,t,None) ->
-     let id_ = delete_num_in_str id in
-     lookup id_ (env_ext val_table id_ (TopVarVal (id_, eval' e1 rec_depth, t)))
+     let evaled_value = eval' e1 rec_depth in
+     begin
+       match evaled_value with
+       | FunVal _ ->
+          let id_ = add_depth_to_id id rec_depth in
+          lookup id_ (env_ext val_table id_ evaled_value)
+       | _ ->
+          let id_ = add_depth_to_id id rec_depth in
+          lookup id_ (env_ext val_table id_ (TopVarVal (delete_num_in_str id_, evaled_value, t)))
+     end
   | VarDecl (id,e1,_,Some e2) ->
      let id_ = add_depth_to_id id rec_depth in
      env_ext val_table id_ (eval' e1 rec_depth);
      eval' e2 rec_depth
   | FuncDecl (id,args,e1,t,_,None) ->
      let arg_ids = List.map Analyzer.get_id_of args in
-     let id_ = delete_num_in_str id in     
+     let id_ = add_depth_to_id id rec_depth in
      lookup id_ (env_ext val_table id_ (FunVal (id_, arg_ids, e1, unwrap_type_kind t)))
   | FuncDecl (id,args,e1,t,_,Some e2) ->
      let arg_ids = List.map Analyzer.get_id_of args in
@@ -221,7 +248,7 @@ let rec eval' input rec_depth =
           let func = lookup id_ val_table in
           let evaled_args = List.map (fun arg -> eval' arg rec_depth) call_args in
           begin
-            match func with          
+            match func with
             | FunVal (_,pro_args,e1,_) ->
                let recursive_add =
                  if !parent_func = id
@@ -240,9 +267,9 @@ let rec eval' input rec_depth =
                let result = eval' e1 (rec_depth + recursive_add) in
                parent_func := parent_func_tmp;
                result
-            | IntrinsicFunVal _ ->               
+            | IntrinsicFunVal (printer, _) ->
                begin
-                 match (id, evaled_args) with
+                 match (printer, evaled_args) with
                  | ("print_int", [IntVal n]) ->
                     print_int n;
                     UnitVal
@@ -255,15 +282,7 @@ let rec eval' input rec_depth =
                  | ("print_newline", [UnitVal]) ->
                     print_newline ();
                     UnitVal
-                 | (_, [FunVal _]) -> failwith "This is function value call with intrinsic function"
-                 | (_, [TopVarVal _]) -> failwith "Tihs is Toplevel variable call with intrinsic function"
-                 | (func_name, args) ->
-                    print_string "hoge\n";
-                    let new_func = lookup func_name val_table in
-                    print_string func_name;
-                    print_string (val_to_str new_func);
-                    env_ext val_table func_name new_func;
-                    eval' (CallFunc(IdTerm(func_name, t), call_args)) rec_depth
+                 | _ -> failwith "hoge"
                end
             | otherwise ->
                print_string (val_to_str otherwise);
@@ -282,9 +301,9 @@ let rec eval' input rec_depth =
      end
   | ArrayRef (id,index,t) ->
      begin
+       let id_ = add_depth_to_id id rec_depth in
        match (eval' index rec_depth) with
        | IntVal n ->
-          let id_ = add_depth_to_id id rec_depth in
           let array = lookup id_ val_table in
           begin
             match array with
