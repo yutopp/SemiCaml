@@ -137,7 +137,9 @@ let intrinsic_func =
   ignore(env_ext val_table "print_int.0" (IntrinsicFunVal ("print_int",[Int;Unit])));
   ignore(env_ext val_table "print_float.0" (IntrinsicFunVal ("print_float",[Float;Unit])));
   ignore(env_ext val_table "print_bool.0" (IntrinsicFunVal ("print_bool",[Boolean;Unit])));
-  ignore(env_ext val_table "print_newline.0" (IntrinsicFunVal ("print_newline",[Unit;Unit])))
+  ignore(env_ext val_table "print_newline.0" (IntrinsicFunVal ("print_newline",[Unit;Unit])));
+  ignore(env_ext val_table "read_int.0" (IntrinsicFunVal ("read_int",[Unit;Int])));
+  ignore(env_ext val_table "read_float.0" (IntrinsicFunVal ("read_float",[Unit;Float])))
 
 let rec eval' input rec_depth =
   let intop f e1 e2 = match (eval' e1 rec_depth, eval' e2 rec_depth) with
@@ -267,9 +269,9 @@ let rec eval' input rec_depth =
                let result = eval' e1 (rec_depth + recursive_add) in
                parent_func := parent_func_tmp;
                result
-            | IntrinsicFunVal (printer, _) ->
+            | IntrinsicFunVal (intfunc, _) ->
                begin
-                 match (printer, evaled_args) with
+                 match (intfunc, evaled_args) with
                  | ("print_int", [IntVal n]) ->
                     print_int n;
                     UnitVal
@@ -282,7 +284,13 @@ let rec eval' input rec_depth =
                  | ("print_newline", [UnitVal]) ->
                     print_newline ();
                     UnitVal
-                 | _ -> failwith "hoge"
+                 | ("read_int", [UnitVal]) ->
+                    let n = read_int () in
+                    IntVal n
+                 | ("read_float", [UnitVal]) ->
+                    let r = read_float () in
+                    FloatVal r
+                 | _ -> failwith "not type mutch intrinsic function call"
                end
             | otherwise ->
                print_string (val_to_str otherwise);
