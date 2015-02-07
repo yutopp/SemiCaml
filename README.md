@@ -6,6 +6,7 @@
 + OCaml 
 + LLVM [>= 3.5]
 + GCC (or Clang) [supports C++11]
++ Ruby (for testing, optional)
 
 # How to build
 ```
@@ -26,20 +27,18 @@ omake check
 each test
 ```
 omake check_parser
-```
-```
 omake check_analyzer
-```
-```
 omake check_interpreter
-```
-```
 omake check_combine
+ruby test/e2e_compiler/runtest.rb
 ```
 
 # Usage
 ```
 ./semicaml <filename>
+./semicaml <filename> -o output
 ./semicaml --repl [filename]
 ```
 
+# License
+NYSL
