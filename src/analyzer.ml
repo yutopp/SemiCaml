@@ -5,7 +5,7 @@ exception UnexpectedEnv
 exception UnexpectedAttributedAST of string
 
 exception SemanticError of string
-exception UnexpectedTypeKind
+exception UnexpectedTypeKind of string
 
 type type_kind =
     Int
@@ -127,7 +127,7 @@ let update_type sym id target tk =
   (* Printf.printf "NEW! %s: %s\n" id (to_string tk); *)
   save_env_as_flat id n
 
-let unify ltk rtk =
+let rec unify ltk rtk =
   let merge li ri =
     let ltk = find_tk_from_type_id !li in
     let rtk = find_tk_from_type_id !ri in
@@ -164,6 +164,9 @@ let unify ltk rtk =
     | b when b = tk -> tk
     | _ -> raise UnexpectedEnv
   in
+  let raise_exception () =
+    raise (SemanticError (Printf.sprintf "type missmatch %s <> %s" (to_string ltk) (to_string rtk)))
+  in
   match (ltk, rtk) with
     (TypeVar ri, TypeVar rj) -> merge ri rj
   | (TypeVar ri, tk) -> merge_tk !ri tk
@@ -171,8 +174,23 @@ let unify ltk rtk =
   | (Int, Int) -> Int
   | (Float, Float) -> Float
   | (Boolean, Boolean) -> Boolean
+  | (Array lhs_tk, Array rhs_tk) ->
+     begin
+       try
+         Array (unify lhs_tk rhs_tk)
+       with
+         _ -> raise_exception ()
+     end
+  | (Func lhs_tks, Func rhs_tks) ->
+     begin
+       try
+         let new_params = List.map2 unify lhs_tks rhs_tks in
+         Func new_params
+       with
+         _ -> raise_exception ()
+     end
   | (l, r) when l = r -> l
-  | (l, r) -> raise (SemanticError (Printf.sprintf "type missmatch %s <> %s" (to_string l) (to_string r)))
+  | (l, r) -> raise_exception ()
 
 let rec dump_env ?(offset=0) env = match env with
     EModule sym ->
@@ -328,14 +346,16 @@ let get_id_of a = match a with
   | IdTerm (id, _) -> id
   | ANone -> raise (UnexpectedAttributedAST "None")
 
-let unwrap_type_kind tk = match tk with
+let rec unwrap_type_kind tk = match tk with
     TypeVar ri ->
     begin
       let ref_tk = find_tk_from_type_id !ri in
       match ref_tk with
         Undefined -> tk
-      | _ -> ref_tk
+      | _ -> unwrap_type_kind ref_tk
     end
+  | Array inner_tk -> Array (unwrap_type_kind inner_tk)
+  | Func inner_tks -> Func (List.map unwrap_type_kind inner_tks)
   | _ -> tk
 
 let dump_type_env () =
@@ -345,13 +365,13 @@ let dump_type_env () =
 let param_type_from_list tkx = List.rev (List.tl (List.rev tkx))
 let return_type_from_list tkx = List.hd (List.rev tkx)
 
-let param_type tk = match tk with
+let param_type tk = match (unwrap_type_kind tk) with
     Func params -> param_type_from_list params
-  | otherwise -> raise UnexpectedTypeKind
+  | otherwise -> raise (UnexpectedTypeKind (to_string tk))
 
-let return_type tk = match tk with
+let return_type tk = match (unwrap_type_kind tk) with
     Func params -> return_type_from_list params
-  | otherwise -> raise UnexpectedTypeKind
+  | otherwise ->dump_type_env(); raise (UnexpectedTypeKind (to_string tk))
 
 
 let rec type_kind_of a =
@@ -360,7 +380,7 @@ let rec type_kind_of a =
     | Term (_, tk) -> tk
     | BinOp (_, _, _, tk) -> tk
     | Cond (cond, a, b) -> type_kind_of a
-    | CallFunc (a, _) -> return_type (type_kind_of a)
+    | CallFunc (f, _) -> return_type (type_kind_of f)
     | ArrayCreate (_, tk) -> tk
     | ArrayRef (_, _, tk) -> tk
     | ArrayAssign (_, _, _, tk) -> tk
@@ -625,7 +645,7 @@ let rec analyze' ast env depth ottk oenc =
            let ea = analyze' a env depth (Some param_tk) oenc in
            match (type_kind_of ea) = (unwrap_type_kind param_tk) with
              true -> ea
-           | _ -> raise (SemanticError (Printf.sprintf "type of index %d is mismatched / %s <> %s" i (to_string (type_kind_of ea)) (to_string param_tk)))
+           | _ -> dump_type_env (); raise (SemanticError (Printf.sprintf "type of index %d is mismatched / %s <> %s" i (to_string (type_kind_of ea)) (to_string param_tk)))
          in
          let a_args = List.mapi eval_arg args in
          CallFunc (aast, a_args)
@@ -638,7 +658,7 @@ let rec analyze' ast env depth ottk oenc =
               let n_params = List.map (fun x -> create_type_var ()) args in
               let n_ret = create_type_var () in
               let fn_type = Func (n_params @ [n_ret]) in
-              apply aast fn_type
+              apply aast (unify (type_kind_of aast) fn_type)
             end
        in
        let f_aast = analyze' (Id name) env depth None oenc in
