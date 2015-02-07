@@ -25,7 +25,7 @@ let repl () =
   print_newline ();
   repl' ()
 
-let build filename =
+let build filename lib_path out_name =
   print_string "mean mean\n";
   let in_channel = open_in filename in
   let chars = char_list_of_in_channel in_channel in
@@ -43,43 +43,42 @@ let build filename =
   print_string "=== Generating...\n";
   flush stdout;
   let llvm_module = Codegen.compile attr_ast in
-  Codegen.create_executable llvm_module;
+  Codegen.create_executable llvm_module lib_path out_name;
 
-  print_string "=== Executable a.out was generated successfully!\n";
+  print_string (Printf.sprintf "=== Executable %s was generated successfully!\n" (Filename.quote out_name));
   flush stdout
 
-let show_usage () =
-  print_string "Usage: semicaml <options>\n";
-  print_string "options are\n";
-  print_string "  <filename>         Build <filename>\n";
-  print_string "  --repl [filename]  Start repl environment\n";
-  print_string "\n";
-  print_string "example\n";
-  print_string "  semicaml samples/rec.seml\n";
-  print_string "  semicaml --repl\n";
-  print_string "  semicaml --repl samples/rec.seml\n";
-  flush stdout
 
 let () =
-  let argv_len = Array.length Sys.argv in
-  match argv_len with
-  | 1 -> show_usage ()
-  | 2 ->
-     let arg = Sys.argv.(1) in
-     begin
-       match arg with
-       | "--repl" -> repl ()
-       | filename -> build filename
-     end
-  | 3 ->
-     let arg1 = Sys.argv.(1) in
-     let arg2 = Sys.argv.(2) in
-     begin
-       match (arg1, arg2) with
-       | ("--repl", filename) ->
-          let in_channel =  open_in filename in
+  let input_file = ref None in
+  let lib_path = ref "libsemiruntime.a" in
+  let output_file = ref "a.out" in
+  let repl_file = ref None in
+
+  let usagemsg = "Usage: semicaml [filename] <options>\n"; in
+  let speclist = [
+    ("-o", Arg.Set_string output_file, " specify output file name");
+    ("--lib", Arg.String (fun s -> lib_path := s), "set lib path");
+    ("--repl", Arg.String (fun s -> repl_file := Some s), "filename  execute 'filename' in repl environment");
+  ] in
+  Arg.parse speclist (fun s -> (input_file := Some s)) usagemsg;
+
+  match !input_file with
+    Some filename ->
+    begin
+      (* compilation mode *)
+      build filename !lib_path !output_file
+    end
+
+  | None ->
+    begin
+      (* repl *)
+      match !repl_file with
+        Some filename ->
+        begin
+          let in_channel = open_in filename in
           let chars = char_list_of_in_channel in_channel in
           in_file_repl chars
-       | _ -> failwith "invalid argument"
-     end
-  | _ -> failwith "invalid argument"
+        end
+      | None -> repl ()
+    end

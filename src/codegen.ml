@@ -602,11 +602,20 @@ exception FailedToWriteBitcode
 exception FailedToBuildBitcode
 exception FailedToBuildExecutable
 
-let create_executable m =
-  let bc_wrote = LBW.write_bitcode_file m "a.bc" in
+let create_executable m lib_name out_name =
+  let basic_name = try Filename.chop_extension out_name with Invalid_argument _ -> out_name in
+  let bitcode_name = basic_name ^ ".bc" in
+
+  (* output LLVM bitcode to the file *)
+  let bc_wrote = LBW.write_bitcode_file m bitcode_name in
   if not bc_wrote then raise FailedToWriteBitcode;
-  let sc = Sys.command "llc -filetype=obj a.bc" in
+
+  (* build bitcode and output object file *)
+  let bin_name = basic_name ^ ".o" in
+  let sc = Sys.command (Printf.sprintf "llc %s -filetype=obj -o %s " (Filename.quote bitcode_name) (Filename.quote bin_name)) in
   if sc <> 0 then raise FailedToBuildBitcode;
-  let sc = Sys.command "g++ a.o libsemiruntime.a" in
+
+  (* output executable *)
+  let sc = Sys.command (Printf.sprintf "g++ %s %s -o %s" (Filename.quote bin_name) (Filename.quote lib_name) (Filename.quote out_name)) in
   if sc <> 0 then raise FailedToBuildExecutable;
   ()
