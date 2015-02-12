@@ -200,15 +200,19 @@ let suite =
 
                                         "22",
                                         IntVal 0,
-                                        "let rec f a = if a = 0 then 0 else f(a-1);;
-                                         f 10";
+                                        "let rec g a = if a = 0 then 0 else g (a-1);;
+                                         g 10;;";
 
                                         "23",
-                                        IntVal 55,
-                                        "let rec times f n acc = if n = 0 then acc else (f n; times f (n - 1) (n + acc));;
+                                        UnitVal,
+                                        "let rec times f n = if n = 0 then () else (times f (n - 1); f n; ());;
+                                         
+                                         times print_int 10;;
+                                         print_newline();;
 
-                                         times print_int 10 0;;";
-
+                                         let f n = print_int n; print_newline();;
+                                         times f 20;;";
+                                        
                                         "24",
                                         IntVal 444,
                                         "let x = let f x = x + 123 in (let f x = x * x in f 10); f 321;;
